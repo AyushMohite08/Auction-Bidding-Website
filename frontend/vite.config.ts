@@ -8,7 +8,7 @@ export default defineConfig({
   define: {
     // !!! IMPORTANT: Replace '<EC2_PUBLIC_IP_OR_DOMAIN>' with the actual public 
     // endpoint of your EC2 backend API.
-    'process.env.VITE_API_URL': JSON.stringify('http://<EC2_PUBLIC_IP_OR_DOMAIN>/api'),
+    'process.env.VITE_API_URL': JSON.stringify('http://13.204.152.96/api'),
   },
 
   optimizeDeps: {
