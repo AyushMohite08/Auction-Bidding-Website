@@ -4,7 +4,7 @@ import { Clock, DollarSign, Users, TrendingUp, Package, Plus, Eye, CheckCircle, 
 
 // NOTE: Removed 'faker' import.
 // Assuming this utility file is available in src/utils/apiClient.js
-import { apiClient } from '../utils/apiClient';
+import { apiClient } from '../api/apiClient';
 // NOTE: Assuming you can get the authenticated user's token/ID from your AuthContext
 
 const VendorDashboard = () => {

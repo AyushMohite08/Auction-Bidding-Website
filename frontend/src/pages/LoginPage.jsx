@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { User, Lock } from 'lucide-react';
 
 // Assuming this utility file is available in src/utils/apiClient.js
-import { apiClient } from '../utils/apiClient';
+import { apiClient } from '../api/apiClient';
 
 const LoginPage = () => {
     const [email, setEmail] = useState('');

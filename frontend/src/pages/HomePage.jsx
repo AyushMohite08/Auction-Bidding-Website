@@ -5,7 +5,7 @@ import { TrendingUp, Users, Clock, DollarSign } from 'lucide-react';
 
 // NOTE: Removed 'faker' import.
 // Assuming this utility file is available in src/utils/apiClient.js
-import { apiClient } from '../utils/apiClient'; 
+import { apiClient } from '../api/apiClient';
 
 const HomePage = () => {
     // New state to hold fetched statistics

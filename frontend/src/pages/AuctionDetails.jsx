@@ -3,9 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Clock, User, MapPin, Phone, DollarSign, Users, Award, ArrowLeft } from 'lucide-react';
 
-// NOTE: Removed 'faker' import.
-// Assuming this utility file is available in src/utils/apiClient.js
-import { apiClient } from '../utils/apiClient'; 
+import { apiClient } from '../api/apiClient';
 // NOTE: Assuming you can get the authenticated user's ID/token from your AuthContext
 
 const AuctionDetails = () => {

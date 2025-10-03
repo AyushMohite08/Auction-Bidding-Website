@@ -5,7 +5,7 @@ import { Clock, DollarSign, Users, Eye, Search, Filter } from 'lucide-react';
 
 // NOTE: Removed 'faker' import as data will come from the backend.
 // We assume you have created this utility file in src/utils/apiClient.js
-import { apiClient } from '../utils/apiClient';
+import { apiClient } from '../api/apiClient';
 // NOTE: Assuming AuthContext is available via useAuth if needed for tokens
 
 const CustomerDashboard = () => {
