@@ -3,6 +3,7 @@ import cors from "cors";
 import auctionRoutes from "./routes/auctionRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
+import statsRoutes from "./routes/statsRoutes.js";
 import dotenv from "dotenv";
 
 // Load environment variables
@@ -12,7 +13,7 @@ const app = express();
 
 // Enable CORS for your frontend domain
 app.use(cors({
-  origin: ["http://localhost:5173", "http://localhost:3000"],
+  origin: ["http://localhost:3000", "http://localhost:5173"],
   credentials: true
 }));
 app.use(express.json());
@@ -21,6 +22,7 @@ app.use(express.json());
 app.use("/api", auctionRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api", dashboardRoutes);
+app.use("/api", statsRoutes);
 
 // Health check
 app.get("/", (req, res) => {

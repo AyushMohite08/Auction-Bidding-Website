@@ -2,6 +2,7 @@ import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import * as rdsModel from "../models/rdsModel.js";
+import { pool } from "../models/rdsModel.js";
 
 const router = express.Router();
 
@@ -29,15 +30,11 @@ router.post("/register", async (req, res) => {
       });
     }
 
-    // Hash password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    // Create user
+    // Create user with plain password
     const newUser = await rdsModel.createUser({
       name,
       email,
-      password_hash: hashedPassword,
+      password_hash: password, // Storing plain password
       role
     });
 
@@ -73,9 +70,12 @@ router.post("/login/:role", async (req, res) => {
   const { email, password } = req.body;
   const { role } = req.params;
 
+  console.log('Login attempt:', { email, role }); // Debug log
+
   try {
     // Validate input
     if (!email || !password) {
+      console.log('Missing credentials'); // Debug log
       return res.status(400).json({ 
         success: false,
         message: "Please provide email and password" 
@@ -83,7 +83,10 @@ router.post("/login/:role", async (req, res) => {
     }
 
     // Find user
+    console.log('Finding user with email and role:', { email, role }); // Debug log
     const user = await rdsModel.findUserByEmail(email, role);
+    console.log('User found:', user ? 'Yes' : 'No'); // Debug log
+    
     if (!user) {
       return res.status(404).json({ 
         success: false,
@@ -91,8 +94,11 @@ router.post("/login/:role", async (req, res) => {
       });
     }
 
-    // Verify password
-    const isMatch = await bcrypt.compare(password, user.password_hash);
+    // Simple password comparison
+    const isMatch = (password === user.password);
+    console.log('Checking password:', password);
+    console.log('Stored password:', user.password);
+    
     if (!isMatch) {
       return res.status(400).json({ 
         success: false,
@@ -120,9 +126,31 @@ router.post("/login/:role", async (req, res) => {
     });
   } catch (error) {
     console.error("Login error:", error);
+    console.error("Error stack:", error.stack); // Adding stack trace
     res.status(500).json({ 
       success: false,
-      message: "Error during login" 
+      message: "Error during login",
+      debug: error.message // Adding error message for debugging
+    });
+  }
+});
+router.get("/debug/db", async (req, res) => {
+  if (!pool) {
+    return res.status(500).json({
+      success: false,
+      error: "MySQL pool is not initialized. Check .env and DB connectivity."
+    });
+  }
+
+  try {
+    const [rows] = await pool.execute("SELECT 1 + 1 AS result");
+    res.json({ success: true, result: rows[0] });
+  } catch (err) {
+    console.error("DB debug error:", err);
+    res.status(500).json({
+      success: false,
+      error: err.message || "Unknown error",
+      stack: err.stack || "No stack trace"
     });
   }
 });

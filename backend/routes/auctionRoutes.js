@@ -8,6 +8,8 @@ import * as rdsModel from '../models/rdsModel.js';
 const router = express.Router();
 const upload = multer({ dest: 'uploads/' });
 
+export default router;
+
 // --- Vendor Upload ---
 router.post('/vendor/upload', upload.single('itemImage'), async (req, res) => {
   const { itemName, description, minBid, vendorId } = req.body;
@@ -53,5 +55,3 @@ router.post('/customer/bid', async (req, res) => {
     res.status(400).json({ message: error.message });
   }
 });
-
-module.exports = router;

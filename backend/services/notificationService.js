@@ -6,7 +6,7 @@ const LAMBDA_FUNCTION_NAME = 'AuctionNotification';
 
 const lambdaClient = new LambdaClient({ region: REGION });
 
-async function sendNotificationEvent(payload) {
+export const sendNotificationEvent = async (payload) => {
     const command = new InvokeCommand({
         FunctionName: LAMBDA_FUNCTION_NAME,
         Payload: JSON.stringify(payload),
@@ -20,5 +20,3 @@ async function sendNotificationEvent(payload) {
         console.error('Lambda Invocation Error:', error);
     }
 }
-
-export { sendNotificationEvent };
