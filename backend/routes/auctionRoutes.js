@@ -1,9 +1,9 @@
 // src/api/auctionRoutes.js
-const express = require('express');
-const multer = require('multer');
-const { uploadMediaFile } = require('../utils/s3Service');
-const { sendNotificationEvent } = require('../utils/notificationService');
-const rdsModel = require('../models/rdsModel');
+import express from 'express';
+import multer from 'multer';
+import { uploadMediaFile } from '../services/s3Service.js';
+import { sendNotificationEvent } from '../services/notificationService.js';
+import * as rdsModel from '../models/rdsModel.js';
 
 const router = express.Router();
 const upload = multer({ dest: 'uploads/' });

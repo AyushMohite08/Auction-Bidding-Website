@@ -1,6 +1,7 @@
-const express = require('express');
+import express from 'express';
+import * as rdsModel from '../models/rdsModel.js';
+
 const router = express.Router();
-const rdsModel = require('../models/rdsModel');
 
 // Get dashboard stats
 router.get('/stats', async (req, res) => {
@@ -32,4 +33,4 @@ router.get('/stats', async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

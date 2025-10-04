@@ -2,14 +2,25 @@ import express from "express";
 import cors from "cors";
 import auctionRoutes from "./routes/auctionRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
+import dashboardRoutes from "./routes/dashboardRoutes.js";
+import dotenv from "dotenv";
+
+// Load environment variables
+dotenv.config();
 
 const app = express();
-app.use(cors());
+
+// Enable CORS for your frontend domain
+app.use(cors({
+  origin: ["http://localhost:5173", "http://localhost:3000"],
+  credentials: true
+}));
 app.use(express.json());
 
 // Routes
 app.use("/api", auctionRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api", dashboardRoutes);
 
 // Health check
 app.get("/", (req, res) => {
