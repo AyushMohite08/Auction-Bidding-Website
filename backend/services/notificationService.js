@@ -1,6 +1,5 @@
-// src/utils/notificationService.js (CommonJS Version)
-
-const { LambdaClient, InvokeCommand } = require('@aws-sdk/client-lambda');
+// src/services/notificationService.js
+import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda';
 
 const REGION = 'us-east-1'; // Your AWS region
 const LAMBDA_FUNCTION_NAME = 'AuctionNotification'; 
@@ -22,4 +21,4 @@ async function sendNotificationEvent(payload) {
     }
 }
 
-module.exports = { sendNotificationEvent };
+export { sendNotificationEvent };

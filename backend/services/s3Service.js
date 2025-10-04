@@ -1,7 +1,6 @@
-// src/utils/s3Service.js (CommonJS Version)
-
-const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
-const fs = require('fs');
+// src/services/s3Service.js
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { createReadStream } from 'fs';
 
 // !!! IMPORTANT: Use the correct region and bucket name
 const REGION = 'ap-south-1'; 
@@ -10,7 +9,7 @@ const S3_BUCKET_NAME = 'auction-media-ty4b';
 const s3Client = new S3Client({ region: REGION });
 
 async function uploadMediaFile(file) {
-    const fileStream = fs.createReadStream(file.path);
+    const fileStream = createReadStream(file.path);
     const key = `media/${Date.now()}-${file.originalname}`; 
 
     const uploadParams = {
@@ -36,4 +35,4 @@ async function uploadMediaFile(file) {
     }
 }
 
-module.exports = { uploadMediaFile };
+export { uploadMediaFile };
