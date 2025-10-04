@@ -48,12 +48,20 @@ const Navbar = () => {
                 </div>
               </>
             ) : (
-              <Link 
-                to="/login" 
-                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
-              >
-                Login
-              </Link>
+              <div className="flex items-center space-x-4">
+                <Link 
+                  to="/login" 
+                  className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+                >
+                  Login
+                </Link>
+                <Link 
+                  to="/register" 
+                  className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
+                >
+                  Register
+                </Link>
+              </div>
             )}
           </div>
         </div>

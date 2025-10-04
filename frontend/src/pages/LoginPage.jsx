@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { User, Lock } from 'lucide-react';
@@ -132,7 +132,16 @@ const LoginPage = () => {
                         </button>
                     </div>
 
-                    <div className="text-center text-sm text-gray-600">
+                    <div className="mt-4 text-center">
+                        <p className="text-sm text-gray-600">
+                            Don't have an account?{' '}
+                            <Link to="/register" className="font-medium text-blue-600 hover:text-blue-500">
+                                Register here
+                            </Link>
+                        </p>
+                    </div>
+
+                    <div className="mt-6 text-center text-sm text-gray-600">
                         <p className="mb-2"><strong>Demo Credentials:</strong></p>
                         <p>Customer: customer@demo.com / password</p>
                         <p>Vendor: vendor@demo.com / password</p>
