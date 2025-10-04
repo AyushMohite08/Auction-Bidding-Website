@@ -1,6 +1,5 @@
-// src/models/rdsModel.js (CommonJS Version)
-
-const mysql = require('mysql2/promise'); // Use CJS require
+// src/models/rdsModel.js
+import mysql from 'mysql2/promise';
 
 // Database Connection Configuration (using Environment Variables)
 const pool = mysql.createPool({
@@ -97,7 +96,44 @@ async function createBid(auctionId, userId, amount) {
     }
 }
 
-module.exports = {
+// User related functions
+export async function findUserByEmail(email, role) {
+    const query = `
+        SELECT id, name, email, password_hash, role
+        FROM users
+        WHERE email = ? AND role = ?
+        LIMIT 1
+    `;
+    try {
+        const [rows] = await pool.execute(query, [email, role]);
+        return rows[0];
+    } catch (err) {
+        console.error('Error finding user by email:', err);
+        throw new Error('Database error while finding user');
+    }
+}
+
+export async function createUser({ name, email, password_hash, role }) {
+    const query = `
+        INSERT INTO users (name, email, password_hash, role)
+        VALUES (?, ?, ?, ?)
+    `;
+    try {
+        const [result] = await pool.execute(query, [name, email, password_hash, role]);
+        return {
+            id: result.insertId,
+            name,
+            email,
+            role
+        };
+    } catch (err) {
+        console.error('Error creating user:', err);
+        throw new Error('Database error while creating user');
+    }
+}
+
+// Export existing functions
+export {
     getAuctionsByStatus,
     getAuctionDetails,
     updateAuctionStatus,

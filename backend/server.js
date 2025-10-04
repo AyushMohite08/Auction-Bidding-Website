@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import auctionRoutes from "./routes/auctionRoutes.js";
+import authRoutes from "./routes/authRoutes.js";
 
 const app = express();
 app.use(cors());
@@ -8,6 +9,7 @@ app.use(express.json());
 
 // Routes
 app.use("/api", auctionRoutes);
+app.use("/api/auth", authRoutes);
 
 // Health check
 app.get("/", (req, res) => {
