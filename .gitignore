@@ -16,7 +16,7 @@ frontend/.env
 .env.local
 .env.production
 
-# Uploaded files (images stored in S3)
+# Uploaded files (images stored locally)
 backend/uploads/
 uploads/
 

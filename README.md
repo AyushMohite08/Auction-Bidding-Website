@@ -7,7 +7,7 @@ Real-time auction platform with React, Node.js, Express, MySQL, and Socket.IO.
 - ⚡ Real-time bidding with WebSocket
 - 🔒 Vendor bid locking
 - ⏰ Auto-expiry with winner assignment
-- � Customer tracking (bid history, wins, stats)
+- 📊 Customer tracking (bid history, wins, stats)
 - 🎨 Responsive UI with Tailwind CSS
 - 🔐 JWT authentication with UUID support
 
@@ -16,14 +16,13 @@ Real-time auction platform with React, Node.js, Express, MySQL, and Socket.IO.
 **Frontend:** React, Vite, Tailwind CSS, Socket.IO Client  
 **Backend:** Node.js, Express, Socket.IO, JWT, node-cron  
 **Database:** MySQL 8  
-**Storage:** AWS S3
+**Storage:** Local file system
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 - Node.js (v16+)
 - MySQL (v8+)
-- AWS S3 account
 
 ### Installation
 
@@ -68,7 +67,7 @@ Access: http://localhost:5173
 └── database_setup.sql
 ```
 
-##  Environment Variables
+## 🔑 Environment Variables
 
 **Backend (.env):**
 ```env
