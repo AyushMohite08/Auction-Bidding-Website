@@ -50,10 +50,12 @@ exit;
 
 # Run Application
 # Terminal 1 - Backend
-cd backend && npm start
+cd backend
+npm start
 
 # Terminal 2 - Frontend
-cd frontend && npm run dev
+cd frontend
+npm run dev
 ```
 
 Access: http://localhost:5173
@@ -75,10 +77,6 @@ DB_USER=root
 DB_PASSWORD=your_password
 DB_NAME=auction_db
 JWT_SECRET=your_jwt_secret
-AWS_ACCESS_KEY_ID=your_aws_key
-AWS_SECRET_ACCESS_KEY=your_aws_secret
-AWS_REGION=us-east-1
-S3_BUCKET_NAME=your_bucket
 PORT=3000
 ```
 
