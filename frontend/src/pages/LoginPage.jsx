@@ -1,3 +1,121 @@
+// src/pages/LoginPage.jsx
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { useAuth } from '../contexts/AuthContext';
+import { User, Lock, AlertCircle } from 'lucide-react';
+
+const LoginPage = () => {
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [role, setRole] = useState('customer'); // Default role
+    
+    // Use the error state and login function from AuthContext
+    const { login, error, setError, user } = useAuth();
+    const navigate = useNavigate();
+
+    // Clear previous errors when the component loads
+    useEffect(() => {
+        setError(null);
+    }, [setError]);
+
+    // Redirect if user is already logged in
+    useEffect(() => {
+        if (user) {
+            navigate(`/${user.role}`);
+        }
+    }, [user, navigate]);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        
+        if (!email || !password) {
+            setError('Please fill in all fields');
+            return;
+        }
+
+        try {
+            await login({ email, password, role });
+            // The useEffect above will handle redirection on successful login
+        } catch (err) {
+            // Error is already set in the AuthContext, so no extra handling needed here
+            console.error("Login attempt failed from page");
+        }
+    };
+
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+            <motion.div
+                initial={{ opacity: 0, y: -50 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="max-w-md w-full bg-white p-8 rounded-lg shadow-lg"
+            >
+                <h2 className="text-3xl font-bold text-center text-gray-900 mb-6">
+                    Login to Your Account
+                </h2>
+
+                {error && (
+                    <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-md mb-4 flex items-center">
+                        <AlertCircle className="h-5 w-5 mr-2" />
+                        <span>{error}</span>
+                    </div>
+                )}
+
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    {/* Role Selector */}
+                    <div className="flex justify-center space-x-4 mb-6">
+                        <button type="button" onClick={() => setRole('customer')} className={`px-4 py-2 rounded-md ${role === 'customer' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}>
+                            Customer
+                        </button>
+                        <button type="button" onClick={() => setRole('vendor')} className={`px-4 py-2 rounded-md ${role === 'vendor' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}>
+                            Vendor
+                        </button>
+                    </div>
+
+                    {/* Email Input */}
+                    <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                        <input
+                            type="email"
+                            placeholder="Email address"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        />
+                    </div>
+
+                    {/* Password Input */}
+                    <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                        <input
+                            type="password"
+                            placeholder="Password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        />
+                    </div>
+                    
+                    <button type="submit" className="w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        Sign In
+                    </button>
+
+                    <p className="text-center text-sm text-gray-600">
+                        Don't have an account?{' '}
+                        <Link to="/register" className="font-medium text-blue-600 hover:text-blue-500">
+                            Register here
+                        </Link>
+                    </p>
+                </form>
+            </motion.div>
+        </div>
+    );
+};
+
+export default LoginPage;
+
+/*
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -5,7 +123,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { User, Lock } from 'lucide-react';
 
 // Assuming this utility file is available in src/utils/apiClient.js
-import { apiClient } from '../api/apiClient';
+import apiClient from '../api/apiClient'
 
 const LoginPage = () => {
     const [email, setEmail] = useState('');
@@ -154,3 +272,5 @@ const LoginPage = () => {
 };
 
 export default LoginPage;
+
+*/

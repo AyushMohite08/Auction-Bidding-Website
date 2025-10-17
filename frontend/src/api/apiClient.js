@@ -1,67 +1,42 @@
-// src/utils/apiClient.js (MODIFIED for Authorization)
-
-// Access the environment variable set in vite.config.ts
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+// src/api/apiClient.js
+import axios from "axios";
 
 /**
- * Utility function to safely get the authentication token from localStorage.
+ * ✅ Base URL logic:
+ * Now exported directly for use in other parts of the app, like WebSockets.
  */
-const getAuthToken = () => {
-    const storedUser = localStorage.getItem('auctionUser');
-    if (storedUser) {
-        try {
-            const user = JSON.parse(storedUser);
-            return user.token;
-        } catch (e) {
-            return null;
-        }
-    }
-    return null;
-};
+export const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
 
 /**
- * Utility function to handle all API calls.
- * @param {string} endpoint - The path (e.g., 'auctions/live').
- * @param {object} options - Fetch API options.
- * @returns {Promise<any>}
+ * ✅ Axios instance:
+ * The default export is still the configured client for making API calls.
  */
-export const apiClient = async (endpoint, options = {}) => {
-    const url = `${API_BASE_URL}/${endpoint}`;
-    const token = getAuthToken(); // Retrieve token for authorization
+const apiClient = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
 
-    const headers = {
-        // Set Content-Type by default, can be overridden for FormData/file uploads
-        'Content-Type': 'application/json', 
-        ...options.headers,
-    };
-
-    // Attach token to the Authorization header if available
+/**
+ * ✅ Request Interceptor:
+ * Automatically attaches the auth token to every request.
+ */
+apiClient.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("token");
     if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
+      config.headers.Authorization = `Bearer ${token}`;
     }
-
-    // Remove Content-Type if uploading files (FormData handles it)
-    if (options.body instanceof FormData) {
-        delete headers['Content-Type'];
+    // If the body is FormData (for file uploads), the browser sets the Content-Type.
+    if (config.data instanceof FormData) {
+        delete config.headers['Content-Type'];
     }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
-    const response = await fetch(url, { ...options, headers });
-
-    if (!response.ok) {
-        // Log unauthorized access
-        if (response.status === 401) {
-            console.error("Authorization failed. User may need to log in again.");
-            // NOTE: In a full app, you would dispatch a global logout action here.
-        }
-        
-        const errorBody = await response.json().catch(() => ({ message: `Server error: ${response.status}` }));
-        throw new Error(errorBody.message || `HTTP error! status: ${response.status}`);
-    }
-
-    // Handle 204 No Content responses
-    if (response.status === 204) return null;
-    
-    return response.json();
-};
-
-export default API_BASE_URL;
+export default apiClient;

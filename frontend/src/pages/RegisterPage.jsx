@@ -1,6 +1,106 @@
+// src/pages/RegisterPage.jsx
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { useAuth } from '../contexts/AuthContext';
+import { AlertCircle } from 'lucide-react';
+
+const RegisterPage = () => {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    role: 'customer'
+  });
+  
+  const { register, error, setError, user } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    setError(null);
+  }, [setError]);
+
+  useEffect(() => {
+    if (user) {
+        navigate(`/${user.role}`);
+    }
+  }, [user, navigate]);
+
+  const handleInputChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    try {
+      await register({
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        role: formData.role,
+      });
+      // The useEffect will handle redirection on successful registration
+    } catch (err) {
+      console.error("Registration attempt failed from page");
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+      <motion.div
+        initial={{ opacity: 0, y: -50 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="max-w-md w-full bg-white p-8 rounded-lg shadow-lg"
+      >
+        <h2 className="text-3xl font-bold text-center text-gray-900 mb-6">
+          Create an Account
+        </h2>
+
+        {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-md mb-4 flex items-center">
+                <AlertCircle className="h-5 w-5 mr-2" />
+                <span>{error}</span>
+            </div>
+        )}
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <input type="text" name="name" placeholder="Full Name" onChange={handleInputChange} required className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"/>
+          <input type="email" name="email" placeholder="Email" onChange={handleInputChange} required className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"/>
+          <input type="password" name="password" placeholder="Password" onChange={handleInputChange} required className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"/>
+          <input type="password" name="confirmPassword" placeholder="Confirm Password" onChange={handleInputChange} required className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"/>
+          <select name="role" value={formData.role} onChange={handleInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+            <option value="customer">I am a Customer</option>
+            <option value="vendor">I am a Vendor</option>
+          </select>
+          <button type="submit" className="w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+            Register
+          </button>
+          <p className="text-center text-sm text-gray-600">
+            Already have an account?{' '}
+            <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500">
+              Login here
+            </Link>
+          </p>
+        </form>
+      </motion.div>
+    </div>
+  );
+};
+
+export default RegisterPage;
+
+/*
+
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { apiClient } from '../api/apiClient';
+import apiClient from '../api/apiClient'
 
 const RegisterPage = () => {
   const navigate = useNavigate();
@@ -212,3 +312,5 @@ const RegisterPage = () => {
 };
 
 export default RegisterPage;
+
+*/

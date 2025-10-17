@@ -1,83 +1,111 @@
 // src/contexts/AuthContext.js
 
+// src/contexts/AuthContext.jsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import apiClient from '../api/apiClient';
+import { jwtDecode } from 'jwt-decode';
 
 const AuthContext = createContext();
 
-// Utility function to safely get the token from storage (needed by apiClient)
-const getLocalUser = () => {
-  const storedUser = localStorage.getItem('auctionUser');
-  if (storedUser) {
-    try {
-      return JSON.parse(storedUser);
-    } catch (e) {
-      // In case of parsing error
-      localStorage.removeItem('auctionUser');
-      return null;
-    }
-  }
-  return null;
-};
-
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
+  return useContext(AuthContext);
 };
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Check for stored user session on initial load
-    const storedUser = getLocalUser();
-    if (storedUser) {
-      // NOTE: In a production app, you would ideally send the storedUser.token 
-      // to the EC2 backend here to verify it's still valid/refresh it.
-      setUser(storedUser);
+    // On initial load, try to get user info from localStorage
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        // Decode the token to get user details (like name, role, etc.)
+        const decodedUser = jwtDecode(token);
+        setUser({ ...decodedUser, token });
+      }
+    } catch (err) {
+      // If token is invalid or expired, clear it
+      setUser(null);
+      localStorage.removeItem('token');
+      console.error("Error decoding token on initial load:", err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
-  // Updated Login function: Now accepts the authenticated user object from LoginPage
-  const login = (userData) => {
-    if (!userData || !userData.role || !userData.token) {
-        throw new Error("Invalid user data provided to AuthContext login.");
+  // --- Login Function ---
+  const login = async (credentials) => {
+    setError(null);
+    try {
+      // The role is now part of the URL, as required by the backend
+      const response = await apiClient.post(
+        `/auth/login/${credentials.role}`,
+        { email: credentials.email, password: credentials.password }
+      );
+      
+      const { user: userData, token } = response.data.user;
+      
+      // Store token in localStorage
+      localStorage.setItem('token', token);
+
+      // Set user state
+      const decodedUser = jwtDecode(token);
+      setUser({ ...decodedUser, token });
+      
+      return response.data;
+    } catch (err) {
+      const errorMessage = err.response?.data?.message || "Login failed. Please try again.";
+      setError(errorMessage);
+      console.error("Login error:", errorMessage);
+      throw new Error(errorMessage);
     }
-    
-    // Store the full user object including the token
-    const userProfile = {
-      id: userData.id,
-      email: userData.email,
-      role: userData.role,
-      name: userData.name || userData.email.split('@')[0],
-      token: userData.token, 
-    };
-    
-    setUser(userProfile);
-    localStorage.setItem('auctionUser', JSON.stringify(userProfile));
-    return userProfile;
   };
 
+  // --- Register Function ---
+  const register = async (userData) => {
+    setError(null);
+    try {
+      const response = await apiClient.post('/auth/register', userData);
+      
+      const { user: registeredUser, token } = response.data.user;
+      
+      // Store token in localStorage
+      localStorage.setItem('token', token);
+      
+      // Set user state
+      const decodedUser = jwtDecode(token);
+      setUser({ ...decodedUser, token });
+
+      return response.data;
+    } catch (err) {
+      const errorMessage = err.response?.data?.message || "Registration failed. Please try again.";
+      setError(errorMessage);
+      console.error("Registration error:", errorMessage);
+      throw new Error(errorMessage);
+    }
+  };
+
+  // --- Logout Function ---
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('auctionUser');
-    // NOTE: In a real app, also call the EC2 backend to invalidate the session/token if possible.
+    localStorage.removeItem('token');
   };
 
   const value = {
     user,
+    loading,
+    error,
     login,
+    register,
     logout,
-    loading
+    setError, // Expose setError to allow components to clear errors
   };
 
   return (
     <AuthContext.Provider value={value}>
-      {/* Render children only after checking local storage */}
       {!loading && children}
     </AuthContext.Provider>
   );

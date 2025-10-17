@@ -1,4 +1,73 @@
 import express from "express";
+import jwt from "jsonwebtoken";
+import * as rdsModel from "../models/rdsModel.js";
+
+const router = express.Router();
+
+// ... (register route remains the same, no changes needed there)
+router.post("/register", async (req, res) => {
+  const { name, email, password, role } = req.body;
+  try {
+    if (!name || !email || !password || !role) { return res.status(400).json({ success: false, message: "Please provide all required fields" }); }
+    const existingUser = await rdsModel.findUserByEmail(email, role);
+    if (existingUser) { return res.status(400).json({ success: false, message: "User already exists with this email" }); }
+    const newUser = await rdsModel.createUser({ name, email, password_hash: password, role });
+    const token = jwt.sign({ id: newUser.id, email: newUser.email, role: newUser.role }, process.env.JWT_SECRET, { expiresIn: "24h" });
+    res.status(201).json({ success: true, user: { id: newUser.id, name: newUser.name, email: newUser.email, role: newUser.role, token } });
+  } catch (error) {
+    console.error("Registration error:", error);
+    res.status(500).json({ success: false, message: "Error during registration" });
+  }
+});
+
+
+// Login endpoint with extra debugging
+router.post("/login/:role", async (req, res) => {
+  const { email, password } = req.body;
+  const { role } = req.params;
+
+  console.log("\n--- NEW LOGIN ATTEMPT ---");
+  console.log(`[1] Received login request for email: '${email}', role: '${role}'`);
+  console.log(`[2] Received password: '${password}' (Length: ${password.length})`);
+
+  try {
+    const user = await rdsModel.findUserByEmail(email, role);
+    if (!user) {
+      console.log("[3] User lookup RESULT: User not found in database.");
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    console.log("[3] User lookup RESULT: Found user object:", user);
+    console.log(`[4] Password from DB: '${user.password_hash}' (Length: ${user.password_hash.length})`);
+
+    // --- The Comparison ---
+    const isMatch = (password === user.password_hash);
+
+    console.log(`[5] Comparison RESULT: Is password a match? ---> ${isMatch}`);
+
+    if (!isMatch) {
+      console.log("[6] CONCLUSION: Passwords do not match. Sending 'Invalid credentials'.");
+      return res.status(400).json({ success: false, message: "Invalid credentials" });
+    }
+
+    console.log("[6] CONCLUSION: Passwords match! Generating token.");
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "24h" }
+    );
+
+    res.json({ success: true, user: { id: user.id, name: user.name, email: user.email, role: user.role, token } });
+  } catch (error) {
+    console.error("Login error:", error);
+    res.status(500).json({ success: false, message: "Error during login" });
+  }
+});
+
+export default router;
+
+/*
+import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import * as rdsModel from "../models/rdsModel.js";
@@ -37,6 +106,17 @@ router.post("/register", async (req, res) => {
       password_hash: password, // Storing plain password
       role
     });
+    // Hash the password
+    // const salt = bcrypt.genSaltSync(10);
+    // const password_hash = bcrypt.hashSync(password, salt);
+
+    // // Create user with hashed password
+    // const newUser = await rdsModel.createUser({
+    //   name,
+    //   email,
+    //   password_hash, // Storing hashed password
+    //   role
+    // });
 
     // Generate JWT token
     const token = jwt.sign(
@@ -156,3 +236,5 @@ router.get("/debug/db", async (req, res) => {
 });
 
 export default router;
+
+*/

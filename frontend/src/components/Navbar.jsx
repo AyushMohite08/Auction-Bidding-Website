@@ -21,10 +21,21 @@ const Navbar = () => {
     <nav className="bg-white shadow-lg border-b">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex justify-between items-center h-16">
-          <Link to="/" className="flex items-center space-x-2">
-            <Gavel className="h-8 w-8 text-blue-600" />
-            <span className="text-2xl font-bold text-gray-900">AuctionHub</span>
-          </Link>
+          <div className="flex items-center space-x-8">
+            <Link to="/" className="flex items-center space-x-2">
+              <Gavel className="h-8 w-8 text-blue-600" />
+              <span className="text-2xl font-bold text-gray-900">AuctionHub</span>
+            </Link>
+            
+            <div className="hidden md:flex items-center space-x-6">
+              <Link to="/about" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
+                About
+              </Link>
+              <Link to="/contact" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
+                Contact
+              </Link>
+            </div>
+          </div>
 
           <div className="flex items-center space-x-4">
             {user ? (
