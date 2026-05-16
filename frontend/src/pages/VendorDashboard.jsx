@@ -1,251 +1,359 @@
-// src/pages/VendorDashboard.jsx
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
-import { Plus, Eye, Trash2, TrendingUp, DollarSign, Package, Clock } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
-import apiClient, { API_SERVER_URL } from '../api/apiClient';
-import CountdownTimer from '../components/CountdownTimer';
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { CheckCircle, Edit, Eye, Lock, Plus, Search, Send, Trash2 } from "lucide-react";
+import { auctionApi } from "../api/auctionApi";
+import AuctionForm, { emptyAuctionForm } from "../components/AuctionForm";
+import DataTable from "../components/DataTable";
+import FormField, { inputClass } from "../components/FormField";
+import Modal from "../components/Modal";
+import StatusBadge from "../components/StatusBadge";
+import Toast from "../components/Toast";
+import useSocket from "../hooks/useSocket";
+import {
+  ACTIVE_STATUSES,
+  CLOSED_STATUSES,
+  compactError,
+  formatCurrency,
+  formatDateTime,
+  parseRequestedChanges,
+  priceForAuction,
+  toInputDateTime,
+} from "../utils/formatters";
 
-// Helper component to display each auction card
-const AuctionCard = ({ auction, onDelete, isPast = false }) => {
-    const displayPrice = auction.locked_price || auction.current_bid || auction.min_bid;
-    const priceLabel = isPast 
-        ? (auction.status === 'sold' ? 'Sold For' : 'Final Price')
-        : 'Current Price';
-    
-    return (
-        <div className={`bg-white rounded-lg shadow-md overflow-hidden flex flex-col ${isPast ? 'opacity-75' : ''}`}>
-            <img src={`${API_SERVER_URL}${auction.image_url}`} alt={auction.item_name} className="w-full h-48 object-cover"/>
-            <div className="p-4 flex-grow">
-                <h3 className="text-lg font-bold truncate">{auction.item_name}</h3>
-                <p className="text-gray-600 text-sm mt-1 flex items-center">
-                    Status: <span className={`font-semibold capitalize ml-1 ${
-                        auction.status === 'sold' ? 'text-green-600' :
-                        auction.status === 'active' || auction.status === 'approved' ? 'text-blue-600' :
-                        auction.status === 'pending' ? 'text-yellow-600' :
-                        auction.status === 'rejected' ? 'text-red-600' :
-                        'text-gray-600'
-                    }`}>{auction.status}</span>
-                    {auction.locked_price && <span className="text-xs ml-2 bg-blue-100 text-blue-800 px-2 py-0.5 rounded">Locked</span>}
-                </p>
-                {!isPast && (auction.status === 'active' || auction.status === 'approved') && (
-                    <div className="mt-2 flex items-center text-sm text-gray-500">
-                        <Clock className="h-4 w-4 mr-1" />
-                        <CountdownTimer endTime={auction.end_time} />
-                    </div>
-                )}
-                {isPast && (
-                    <>
-                        {auction.status === 'sold' && auction.winner_name && (
-                            <p className="text-sm text-green-600 mt-2 font-semibold">
-                                🏆 Sold to: <strong>{auction.winner_name}</strong>
-                            </p>
-                        )}
-                        {auction.status === 'expired' && (
-                            <p className="text-sm text-gray-500 mt-2">⏰ Expired (No winner)</p>
-                        )}
-                        {auction.status === 'rejected' && (
-                            <p className="text-sm text-red-500 mt-2">❌ Rejected by Admin</p>
-                        )}
-                    </>
-                )}
-                <p className="text-gray-800 font-bold mt-2">{priceLabel}: ${parseFloat(displayPrice).toFixed(2)}</p>
-                {!isPast && auction.current_bid && (
-                    <p className="text-xs text-gray-500">Bids placed</p>
-                )}
-            </div>
-            <div className="p-4 border-t flex space-x-2">
-                <Link to={`/auction/${auction.id}`} className="flex-1 flex items-center justify-center bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
-                    <Eye className="h-4 w-4 mr-2" /> View
-                </Link>
-                {!isPast && (auction.status === 'pending' || auction.status === 'rejected') && (
-                    <button onClick={() => onDelete(auction.id)} className="flex-1 flex items-center justify-center bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition-colors">
-                        <Trash2 className="h-4 w-4 mr-2" /> Delete
-                    </button>
-                )}
-            </div>
-        </div>
-    );
-};
+const tabs = [
+  { id: "pending", label: "Pending" },
+  { id: "live", label: "Live" },
+  { id: "closed", label: "Closed" },
+  { id: "requests", label: "Change requests" },
+];
 
-const VendorDashboard = () => {
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [allAuctions, setAllAuctions] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const { user } = useAuth();
-    const [formData, setFormData] = useState({
-        itemName: '', description: '', minBid: '', itemImage: null, startTime: '', endTime: ''
+export default function VendorDashboard() {
+  const [auctions, setAuctions] = useState([]);
+  const [requests, setRequests] = useState([]);
+  const [tab, setTab] = useState("pending");
+  const [query, setQuery] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [toast, setToast] = useState(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editState, setEditState] = useState(null);
+  const [requestState, setRequestState] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      setError(null);
+      const [vendorAuctions, vendorRequests] = await Promise.all([
+        auctionApi.listVendorAuctions(),
+        auctionApi.listVendorChangeRequests(),
+      ]);
+      setAuctions(vendorAuctions || []);
+      setRequests(vendorRequests || []);
+    } catch (err) {
+      setError(compactError(err, "Failed to load vendor dashboard."));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  useSocket(
+    "new_notification",
+    useCallback(
+      (payload) => {
+        setToast({ type: "info", message: payload?.message || "Auction activity updated." });
+        load();
+      },
+      [load]
+    )
+  );
+
+  const normalizedQuery = query.trim().toLowerCase();
+  const visibleAuctions = useMemo(() => {
+    return auctions.filter((auction) => {
+      if (normalizedQuery && !`${auction.item_name} ${auction.description}`.toLowerCase().includes(normalizedQuery)) return false;
+      if (tab === "pending") return auction.status === "pending";
+      if (tab === "live") return ACTIVE_STATUSES.includes(auction.status);
+      if (tab === "closed") return CLOSED_STATUSES.includes(auction.status);
+      return true;
     });
+  }, [auctions, normalizedQuery, tab]);
 
-    const { liveAuctions, pastAuctions } = useMemo(() => {
-        const live = allAuctions.filter(a => a.status === 'pending' || a.status === 'active' || a.status === 'approved');
-        const past = allAuctions.filter(a => a.status === 'sold' || a.status === 'expired' || a.status === 'rejected');
-        return { liveAuctions: live, pastAuctions: past };
-    }, [allAuctions]);
+  const stats = useMemo(() => ({
+    total: auctions.length,
+    pending: auctions.filter((a) => a.status === "pending").length,
+    live: auctions.filter((a) => ACTIVE_STATUSES.includes(a.status)).length,
+    sold: auctions.filter((a) => a.status === "sold").length,
+    revenue: auctions.filter((a) => a.status === "sold").reduce((sum, a) => sum + Number(a.locked_price || a.current_bid || 0), 0),
+  }), [auctions]);
 
-    const statistics = useMemo(() => {
-        const totalAuctions = allAuctions.length;
-        const activeAuctions = allAuctions.filter(a => a.status === 'active' || a.status === 'approved').length;
-        const pendingAuctions = allAuctions.filter(a => a.status === 'pending').length;
-        const soldAuctions = allAuctions.filter(a => a.status === 'sold').length;
-        const totalRevenue = allAuctions
-            .filter(a => a.status === 'sold')
-            .reduce((sum, a) => sum + parseFloat(a.locked_price || a.current_bid || 0), 0);
-        
-        return { totalAuctions, activeAuctions, pendingAuctions, soldAuctions, totalRevenue };
-    }, [allAuctions]);
+  const createAuction = async (event) => {
+    event.preventDefault();
+    setSubmitting(true);
+    try {
+      await auctionApi.createVendorAuction(createOpen);
+      setToast({ type: "success", message: "Auction submitted for admin review." });
+      setCreateOpen(false);
+      await load();
+    } catch (err) {
+      setToast({ type: "error", message: compactError(err, "Failed to create auction.") });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
-    const fetchVendorAuctions = useCallback(async () => {
-        setLoading(true);
-        try {
-            const response = await apiClient.get(`/vendor/auctions`);
-            setAllAuctions(response.data);
-        } catch (err) { setError('Failed to fetch your auctions.'); } finally { setLoading(false); }
-    }, []);
+  const openEdit = async (auction) => {
+    try {
+      const bids = await auctionApi.getBids(auction.id);
+      const hasStarted = new Date(auction.start_time) <= new Date();
+      const hasBids = bids.length > 0 || auction.current_bid !== null;
+      const canDirectEdit =
+        auction.status === "pending" ||
+        (ACTIVE_STATUSES.includes(auction.status) && !hasBids && !hasStarted && !auction.locked_price);
 
-    useEffect(() => { fetchVendorAuctions(); }, [fetchVendorAuctions]);
+      if (canDirectEdit) {
+        setEditState({
+          auction,
+          hasBids,
+          allowIdentityFields: auction.status === "pending",
+          values: valuesFromAuction(auction),
+        });
+      } else {
+        setRequestState({
+          auction,
+          values: {
+            description: auction.description || "",
+            endTime: toInputDateTime(auction.end_time),
+            reason: "",
+          },
+        });
+      }
+    } catch (err) {
+      setToast({ type: "error", message: compactError(err, "Failed to inspect auction edit rules.") });
+    }
+  };
 
-    const handleInputChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
-    const handleFileChange = (e) => setFormData({ ...formData, itemImage: e.target.files[0] });
+  const updateAuction = async (event) => {
+    event.preventDefault();
+    setSubmitting(true);
+    try {
+      await auctionApi.updateVendorAuction(editState.auction.id, editState.values);
+      setToast({ type: "success", message: "Auction updated." });
+      setEditState(null);
+      await load();
+    } catch (err) {
+      setToast({ type: "error", message: compactError(err, "Failed to update auction.") });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
-    const handleFormSubmit = async (e) => {
-        e.preventDefault();
-        setError(null);
-        if (!formData.itemImage || !formData.startTime || !formData.endTime) {
-            setError('Please fill all fields, including start/end times and an image.'); return;
-        }
-        const submissionData = new FormData();
-        Object.keys(formData).forEach(key => submissionData.append(key, formData[key]));
-        submissionData.append('vendorId', user.id);
-        try {
-            await apiClient.post('/vendor/upload', submissionData);
-            setIsModalOpen(false);
-            fetchVendorAuctions(); // Refetch all auctions to show the new one
-        } catch (err) { setError(err.response?.data?.message || 'Failed to create auction.'); }
-    };
+  const createChangeRequest = async (event) => {
+    event.preventDefault();
+    setSubmitting(true);
+    try {
+      await auctionApi.createChangeRequest(requestState.auction.id, {
+        description: requestState.values.description,
+        endTime: requestState.values.endTime ? new Date(requestState.values.endTime).toISOString() : undefined,
+        reason: requestState.values.reason,
+      });
+      setToast({ type: "success", message: "Change request submitted." });
+      setRequestState(null);
+      await load();
+    } catch (err) {
+      setToast({ type: "error", message: compactError(err, "Failed to submit change request.") });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
-    const handleDelete = async (auctionId) => {
-        if (window.confirm("Are you sure? This action cannot be undone.")) {
-            try {
-                await apiClient.delete(`/vendor/auctions/${auctionId}`);
-                setAllAuctions(prev => prev.filter(auction => auction.id !== auctionId));
-                alert("Auction deleted successfully.");
-            } catch (err) {
-                alert(err.response?.data?.message || "Failed to delete auction.");
-            }
-        }
-    };
+  const cancelAuction = async (auction) => {
+    if (!window.confirm(`Cancel "${auction.item_name}"?`)) return;
+    try {
+      await auctionApi.cancelVendorAuction(auction.id);
+      setToast({ type: "success", message: "Auction cancelled." });
+      await load();
+    } catch (err) {
+      setToast({ type: "error", message: compactError(err, "Failed to cancel auction.") });
+    }
+  };
 
-    return (
-        <div className="container mx-auto p-6">
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-3xl font-bold text-gray-800">My Auctions</h1>
-                <button onClick={() => setIsModalOpen(true)} className="flex items-center bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
-                    <Plus className="h-5 w-5 mr-2" /> Create New Auction
-                </button>
-            </div>
+  const lockAuction = async (auction) => {
+    if (!window.confirm(`Lock "${auction.item_name}" and sell to the highest bidder?`)) return;
+    try {
+      await auctionApi.lockVendorAuction(auction.id);
+      setToast({ type: "success", message: "Auction locked." });
+      await load();
+    } catch (err) {
+      setToast({ type: "error", message: compactError(err, "Failed to lock auction.") });
+    }
+  };
 
-            {/* Statistics Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-                <div className="bg-white rounded-lg shadow-md p-4 border-l-4 border-blue-500">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm text-gray-600">Total Auctions</p>
-                            <p className="text-2xl font-bold text-gray-800">{statistics.totalAuctions}</p>
-                        </div>
-                        <Package className="h-10 w-10 text-blue-500 opacity-50" />
-                    </div>
-                </div>
-                <div className="bg-white rounded-lg shadow-md p-4 border-l-4 border-green-500">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm text-gray-600">Active</p>
-                            <p className="text-2xl font-bold text-gray-800">{statistics.activeAuctions}</p>
-                        </div>
-                        <TrendingUp className="h-10 w-10 text-green-500 opacity-50" />
-                    </div>
-                </div>
-                <div className="bg-white rounded-lg shadow-md p-4 border-l-4 border-yellow-500">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm text-gray-600">Pending</p>
-                            <p className="text-2xl font-bold text-gray-800">{statistics.pendingAuctions}</p>
-                        </div>
-                        <Clock className="h-10 w-10 text-yellow-500 opacity-50" />
-                    </div>
-                </div>
-                <div className="bg-white rounded-lg shadow-md p-4 border-l-4 border-purple-500">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm text-gray-600">Sold</p>
-                            <p className="text-2xl font-bold text-gray-800">{statistics.soldAuctions}</p>
-                        </div>
-                        <Package className="h-10 w-10 text-purple-500 opacity-50" />
-                    </div>
-                </div>
-                <div className="bg-white rounded-lg shadow-md p-4 border-l-4 border-green-600">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm text-gray-600">Total Revenue</p>
-                            <p className="text-2xl font-bold text-green-600">${statistics.totalRevenue.toFixed(2)}</p>
-                        </div>
-                        <DollarSign className="h-10 w-10 text-green-600 opacity-50" />
-                    </div>
-                </div>
-            </div>
-
-            {loading && <p className="text-center py-10">Loading...</p>}
-            {error && <p className="text-center py-10 text-red-500">{error}</p>}
-
-            {!loading && !error && (
-                <>
-                    <h2 className="text-2xl font-bold text-gray-700 mt-8 mb-4">Active & Pending Auctions</h2>
-                    {liveAuctions.length > 0 ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">{liveAuctions.map(auction => <AuctionCard key={auction.id} auction={auction} onDelete={handleDelete} />)}</div>
-                    ) : <p className="text-gray-500">You have no active or pending auctions.</p>}
-
-                    <h2 className="text-2xl font-bold text-gray-700 mt-12 mb-4">Past Auctions</h2>
-                    {pastAuctions.length > 0 ? (
-                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">{pastAuctions.map(auction => <AuctionCard key={auction.id} auction={auction} onDelete={handleDelete} isPast />)}</div>
-                    ) : <p className="text-gray-500">You have no past auctions.</p>}
-                </>
-            )}
-
-            {isModalOpen && (
-                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                     <motion.div initial={{ y: -50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-6">
-                         <h2 className="text-2xl font-bold mb-4">New Auction Item</h2>
-                         {error && <p className="text-red-500 mb-4">{error}</p>}
-                         <form onSubmit={handleFormSubmit} className="space-y-4">
-                             <input type="text" name="itemName" placeholder="Item Name" onChange={handleInputChange} required className="w-full px-3 py-2 border rounded"/>
-                             <textarea name="description" placeholder="Description" onChange={handleInputChange} required className="w-full px-3 py-2 border rounded"></textarea>
-                             <input type="number" name="minBid" placeholder="Minimum Bid ($)" onChange={handleInputChange} required className="w-full px-3 py-2 border rounded"/>
-                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Start Time</label>
-                                    <input type="datetime-local" name="startTime" onChange={handleInputChange} required className="mt-1 w-full px-3 py-2 border rounded"/>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">End Time</label>
-                                    <input type="datetime-local" name="endTime" onChange={handleInputChange} required className="mt-1 w-full px-3 py-2 border rounded"/>
-                                </div>
-                             </div>
-                             <div>
-                                 <label className="block text-sm font-medium text-gray-700">Item Image</label>
-                                 <input type="file" name="itemImage" onChange={handleFileChange} required className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
-                             </div>
-                             <div className="flex justify-end space-x-4 pt-2">
-                                 <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-2 border rounded-md text-gray-700 hover:bg-gray-50">Cancel</button>
-                                 <button type="submit" className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Submit for Approval</button>
-                             </div>
-                         </form>
-                     </motion.div>
-                 </motion.div>
-            )}
+  const auctionColumns = [
+    { key: "item_name", header: "Auction", render: (auction) => <div><p className="font-medium text-slate-950">{auction.item_name}</p><p className="text-xs text-slate-500">{formatDateTime(auction.start_time)} to {formatDateTime(auction.end_time)}</p></div> },
+    { key: "status", header: "Status", render: (auction) => <StatusBadge status={auction.status} /> },
+    { key: "price", header: "Price", render: (auction) => formatCurrency(priceForAuction(auction)) },
+    { key: "popcorn", header: "Popcorn", render: (auction) => auction.popcorn_enabled ? "Enabled" : "Off" },
+    {
+      key: "actions",
+      header: "",
+      render: (auction) => (
+        <div className="flex flex-wrap justify-end gap-2">
+          <Link to={`/auction/${auction.id}`} className="rounded-md border border-slate-300 p-2 text-slate-600 hover:bg-slate-100" title="View"><Eye className="h-4 w-4" /></Link>
+          {!["sold", "expired", "cancelled"].includes(auction.status) && <button type="button" onClick={() => openEdit(auction)} className="rounded-md border border-slate-300 p-2 text-slate-600 hover:bg-slate-100" title="Edit or request change"><Edit className="h-4 w-4" /></button>}
+          {ACTIVE_STATUSES.includes(auction.status) && <button type="button" onClick={() => lockAuction(auction)} className="rounded-md border border-slate-300 p-2 text-slate-600 hover:bg-slate-100" title="Lock"><Lock className="h-4 w-4" /></button>}
+          {["pending", "rejected"].includes(auction.status) && <button type="button" onClick={() => cancelAuction(auction)} className="rounded-md border border-rose-200 p-2 text-rose-600 hover:bg-rose-50" title="Cancel"><Trash2 className="h-4 w-4" /></button>}
         </div>
-    );
-};
+      ),
+    },
+  ];
 
-export default VendorDashboard;
+  const requestColumns = [
+    { key: "item_name", header: "Auction", render: (request) => <span className="font-medium text-slate-950">{request.item_name}</span> },
+    { key: "requested_changes", header: "Requested changes", render: (request) => <RequestSummary changes={parseRequestedChanges(request.requested_changes)} /> },
+    { key: "status", header: "Status", render: (request) => <StatusBadge status={request.status} /> },
+    { key: "reason", header: "Reason", render: (request) => request.reason || "No reason provided" },
+    { key: "admin_note", header: "Admin note", render: (request) => request.admin_note || "Pending" },
+  ];
+
+  return (
+    <section className="mx-auto max-w-7xl px-4 py-8">
+      {toast && <Toast {...toast} onClose={() => setToast(null)} />}
+      <div className="mb-6 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-950">Vendor dashboard</h1>
+          <p className="mt-1 text-sm text-slate-500">Create listings, track review status, and request controlled edits.</p>
+        </div>
+        <button type="button" onClick={() => setCreateOpen({ ...emptyAuctionForm })} className="inline-flex items-center justify-center gap-2 rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800">
+          <Plus className="h-4 w-4" />
+          New auction
+        </button>
+      </div>
+
+      <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <Metric label="Total" value={stats.total} />
+        <Metric label="Pending" value={stats.pending} />
+        <Metric label="Live" value={stats.live} />
+        <Metric label="Sold" value={stats.sold} />
+        <Metric label="Revenue" value={formatCurrency(stats.revenue)} />
+      </div>
+
+      <Toolbar query={query} setQuery={setQuery} tab={tab} setTab={setTab} />
+
+      {loading && <p className="py-10 text-center text-sm text-slate-500">Loading vendor data...</p>}
+      {error && <div className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
+      {!loading && !error && (
+        tab === "requests" ? (
+          <DataTable columns={requestColumns} rows={requests} getRowKey={(request) => request.id} emptyTitle="No change requests" />
+        ) : (
+          <DataTable columns={auctionColumns} rows={visibleAuctions} getRowKey={(auction) => auction.id} emptyTitle="No auctions in this view" />
+        )
+      )}
+
+      <Modal open={Boolean(createOpen)} title="Create auction" description="New listings enter pending admin review." onClose={() => setCreateOpen(false)}>
+        {createOpen && (
+          <AuctionForm
+            values={createOpen}
+            onChange={setCreateOpen}
+            onFileChange={(event) => setCreateOpen((prev) => ({ ...prev, itemImage: event.target.files?.[0] || null }))}
+            onSubmit={createAuction}
+            submitting={submitting}
+            submitLabel="Submit for review"
+          />
+        )}
+      </Modal>
+
+      <Modal open={Boolean(editState)} title="Edit auction" description="Available fields follow the backend edit rules for this auction." onClose={() => setEditState(null)}>
+        {editState && (
+          <AuctionForm
+            values={editState.values}
+            onChange={(values) => setEditState((prev) => ({ ...prev, values }))}
+            onFileChange={(event) => setEditState((prev) => ({ ...prev, values: { ...prev.values, itemImage: event.target.files?.[0] || null } }))}
+            onSubmit={updateAuction}
+            submitting={submitting}
+            allowIdentityFields={editState.allowIdentityFields}
+            showImage={editState.allowIdentityFields}
+            submitLabel="Save changes"
+          />
+        )}
+      </Modal>
+
+      <Modal open={Boolean(requestState)} title="Request auction change" description="After bidding starts, vendors can request only description and end time updates." onClose={() => setRequestState(null)}>
+        {requestState && (
+          <form onSubmit={createChangeRequest} className="space-y-4">
+            <FormField label="Description" id="request-description">
+              <textarea id="request-description" rows="4" className={inputClass} value={requestState.values.description} onChange={(event) => setRequestState((prev) => ({ ...prev, values: { ...prev.values, description: event.target.value } }))} required />
+            </FormField>
+            <FormField label="End time" id="request-end">
+              <input id="request-end" type="datetime-local" className={inputClass} value={requestState.values.endTime} onChange={(event) => setRequestState((prev) => ({ ...prev, values: { ...prev.values, endTime: event.target.value } }))} required />
+            </FormField>
+            <FormField label="Reason" id="request-reason">
+              <textarea id="request-reason" rows="3" className={inputClass} value={requestState.values.reason} onChange={(event) => setRequestState((prev) => ({ ...prev, values: { ...prev.values, reason: event.target.value } }))} />
+            </FormField>
+            <div className="flex justify-end">
+              <button type="submit" disabled={submitting} className="inline-flex items-center gap-2 rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60">
+                <Send className="h-4 w-4" />
+                Submit request
+              </button>
+            </div>
+          </form>
+        )}
+      </Modal>
+    </section>
+  );
+}
+
+function valuesFromAuction(auction) {
+  return {
+    id: auction.id,
+    itemName: auction.item_name || "",
+    description: auction.description || "",
+    minBid: auction.min_bid || "",
+    startTime: toInputDateTime(auction.start_time),
+    endTime: toInputDateTime(auction.end_time),
+    itemImage: null,
+    popcornEnabled: Boolean(auction.popcorn_enabled),
+    popcornExtensionMinutes: auction.popcorn_extension_minutes || 5,
+    popcornTriggerSeconds: auction.popcorn_trigger_seconds || 60,
+  };
+}
+
+function RequestSummary({ changes }) {
+  return (
+    <div className="space-y-1 text-xs">
+      {changes.description !== undefined && <p><span className="font-semibold">Description:</span> {String(changes.description).slice(0, 80)}</p>}
+      {changes.endTime !== undefined && <p><span className="font-semibold">End:</span> {formatDateTime(changes.endTime)}</p>}
+    </div>
+  );
+}
+
+function Toolbar({ query, setQuery, tab, setTab }) {
+  return (
+    <div className="mb-6 flex flex-col gap-3 rounded-md border border-slate-200 bg-white p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+      <div className="relative lg:w-96">
+        <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search your auctions" className="w-full rounded-md border border-slate-300 py-2 pl-9 pr-3 text-sm outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200" />
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {tabs.map((item) => (
+          <button key={item.id} type="button" onClick={() => setTab(item.id)} className={`inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium ${tab === item.id ? "bg-slate-950 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"}`}>
+            {item.id === "pending" && <CheckCircle className="h-4 w-4" />}
+            {item.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Metric({ label, value }) {
+  return (
+    <div className="rounded-md border border-slate-200 bg-white p-3 shadow-sm">
+      <p className="text-xs uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="mt-1 truncate text-xl font-semibold text-slate-950">{value}</p>
+    </div>
+  );
+}

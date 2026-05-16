@@ -1,84 +1,62 @@
-import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { Gavel, User, LogOut } from 'lucide-react';
+import { Link, NavLink, useNavigate } from "react-router-dom";
+import { Gavel, LogOut, User } from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
 
-const Navbar = () => {
+const navLinkClass = ({ isActive }) =>
+  `rounded-md px-3 py-2 text-sm font-medium ${isActive ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"}`;
+
+export default function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-  };
-
-  const getDashboardPath = () => {
-    if (!user) return '/';
-    return `/${user.role}`;
+  const handleLogout = async () => {
+    await logout();
+    navigate("/");
   };
 
   return (
-    <nav className="bg-white shadow-lg border-b">
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="flex justify-between items-center h-16">
-          <div className="flex items-center space-x-8">
-            <Link to="/" className="flex items-center space-x-2">
-              <Gavel className="h-8 w-8 text-blue-600" />
-              <span className="text-2xl font-bold text-gray-900">AuctionHub</span>
-            </Link>
-            
-            <div className="hidden md:flex items-center space-x-6">
-              <Link to="/about" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
-                About
-              </Link>
-              <Link to="/contact" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
-                Contact
-              </Link>
-            </div>
-          </div>
+    <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3">
+        <Link to="/" className="flex items-center gap-2 text-slate-950">
+          <span className="flex h-9 w-9 items-center justify-center rounded-md bg-slate-950 text-white">
+            <Gavel className="h-5 w-5" />
+          </span>
+          <span className="text-lg font-semibold">AuctionHub</span>
+        </Link>
 
-          <div className="flex items-center space-x-4">
-            {user ? (
-              <>
-                <Link 
-                  to={getDashboardPath()} 
-                  className="flex items-center space-x-2 px-4 py-2 text-gray-700 hover:text-blue-600 transition-colors"
-                >
-                  <User className="h-5 w-5" />
-                  <span className="capitalize">{user.role} Dashboard</span>
-                </Link>
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm text-gray-600">Hi, {user.name}</span>
-                  <button
-                    onClick={handleLogout}
-                    className="flex items-center space-x-1 px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    <span>Logout</span>
-                  </button>
-                </div>
-              </>
-            ) : (
-              <div className="flex items-center space-x-4">
-                <Link 
-                  to="/login" 
-                  className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
-                >
-                  Login
-                </Link>
-                <Link 
-                  to="/register" 
-                  className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
-                >
-                  Register
-                </Link>
-              </div>
-            )}
-          </div>
+        <nav className="flex flex-wrap items-center gap-1">
+          <NavLink to="/" className={navLinkClass} end>
+            Auctions
+          </NavLink>
+          {user?.role === "customer" && <NavLink to="/customer" className={navLinkClass}>Customer</NavLink>}
+          {user?.role === "vendor" && <NavLink to="/vendor" className={navLinkClass}>Vendor</NavLink>}
+          {user?.role === "admin" && <NavLink to="/admin" className={navLinkClass}>Admin</NavLink>}
+        </nav>
+
+        <div className="flex items-center gap-2">
+          {user ? (
+            <>
+              <Link to="/account" className="hidden items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-950 sm:flex">
+                <User className="h-4 w-4" />
+                {user.name}
+              </Link>
+              <button type="button" onClick={handleLogout} className="inline-flex items-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">
+                <LogOut className="h-4 w-4" />
+                Logout
+              </button>
+            </>
+          ) : (
+            <>
+              <Link to="/login" className="rounded-md px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">
+                Login
+              </Link>
+              <Link to="/register" className="rounded-md bg-slate-950 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800">
+                Register
+              </Link>
+            </>
+          )}
         </div>
       </div>
-    </nav>
+    </header>
   );
-};
-
-export default Navbar;
+}

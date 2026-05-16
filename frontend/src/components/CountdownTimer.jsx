@@ -1,51 +1,48 @@
-// src/components/CountdownTimer.jsx
-import React, { useState, useEffect } from 'react';
-import { Clock } from 'lucide-react';
+import { useEffect, useState } from "react";
+import { Clock } from "lucide-react";
 
-const CountdownTimer = ({ endTime }) => {
-    const [timeLeft, setTimeLeft] = useState('');
-    const [isExpired, setIsExpired] = useState(false);
+function getTimeLeft(endTime) {
+  const end = new Date(endTime);
+  const difference = end.getTime() - Date.now();
 
-    useEffect(() => {
-        const calculateTimeLeft = () => {
-            const end = new Date(endTime);
-            const now = new Date();
-            const difference = end - now;
+  if (!endTime || Number.isNaN(end.getTime()) || difference <= 0) {
+    return { label: "Expired", expired: true };
+  }
 
-            if (difference <= 0) {
-                setIsExpired(true);
-                setTimeLeft('Expired');
-                return;
-            }
+  const days = Math.floor(difference / 86400000);
+  const hours = Math.floor((difference % 86400000) / 3600000);
+  const minutes = Math.floor((difference % 3600000) / 60000);
+  const seconds = Math.floor((difference % 60000) / 1000);
 
-            const days = Math.floor(difference / (1000 * 60 * 60 * 24));
-            const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
-            const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+  if (days > 0) return { label: `${days}d ${hours}h`, expired: false };
+  if (hours > 0) return { label: `${hours}h ${minutes}m`, expired: false };
+  if (minutes > 0) return { label: `${minutes}m ${seconds}s`, expired: false };
+  return { label: `${seconds}s`, expired: false };
+}
 
-            if (days > 0) {
-                setTimeLeft(`${days}d ${hours}h`);
-            } else if (hours > 0) {
-                setTimeLeft(`${hours}h ${minutes}m`);
-            } else if (minutes > 0) {
-                setTimeLeft(`${minutes}m ${seconds}s`);
-            } else {
-                setTimeLeft(`${seconds}s`);
-            }
-        };
+export default function CountdownTimer({ endTime, onExpire }) {
+  const [state, setState] = useState(() => getTimeLeft(endTime));
 
-        calculateTimeLeft();
-        const timer = setInterval(calculateTimeLeft, 1000);
+  useEffect(() => {
+    let expiredNotified = false;
+    const tick = () => {
+      const next = getTimeLeft(endTime);
+      setState(next);
+      if (next.expired && onExpire && !expiredNotified) {
+        expiredNotified = true;
+        onExpire();
+      }
+    };
 
-        return () => clearInterval(timer);
-    }, [endTime]);
+    tick();
+    const timer = window.setInterval(tick, 1000);
+    return () => window.clearInterval(timer);
+  }, [endTime, onExpire]);
 
-    return (
-        <div className={`flex items-center ${isExpired ? 'text-red-500' : 'text-gray-600'}`}>
-            <Clock className="h-4 w-4 mr-1" />
-            <span className="text-sm font-medium">{timeLeft}</span>
-        </div>
-    );
-};
-
-export default CountdownTimer;
+  return (
+    <span className={`inline-flex items-center gap-1 text-sm font-medium ${state.expired ? "text-rose-600" : "text-slate-700"}`}>
+      <Clock className="h-4 w-4" />
+      {state.label}
+    </span>
+  );
+}

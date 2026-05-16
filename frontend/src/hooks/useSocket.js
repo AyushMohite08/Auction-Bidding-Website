@@ -23,5 +23,5 @@ export default function useSocket(eventName, callback) {
     };
   }, [eventName, callback]);
 
-  return socketRef.current;
+  return socketRef;
 }
