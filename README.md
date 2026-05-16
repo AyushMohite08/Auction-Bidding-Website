@@ -1,93 +1,232 @@
-# 🏆 Auction Bidding System
+# Auction Bidding System
 
-Real-time auction platform with React, Node.js, Express, MySQL, and Socket.IO.
+A full-stack auction platform built with React, Node.js, Express, MySQL, and Socket.IO.
 
-## ✨ Features
+The backend currently supports secure HttpOnly cookie authentication, role-based access, vendor auction management, admin approval workflows, customer bidding, account management, change requests, audit logs, and one-time popcorn bidding extensions.
 
-- ⚡ Real-time bidding with WebSocket
-- 🔒 Vendor bid locking
-- ⏰ Auto-expiry with winner assignment
-- 📊 Customer tracking (bid history, wins, stats)
-- 🎨 Responsive UI with Tailwind CSS
-- 🔐 JWT authentication with UUID support
+## Features
 
-## 🛠️ Tech Stack
+- Role-specific auth for customers, vendors, and admins.
+- Single user record per email with multiple roles through `user_roles`.
+- HttpOnly JWT cookies for browser-safe sessions.
+- Vendor auction creation, editing, cancellation, and locking.
+- Admin auction approval/rejection and controlled auction edits.
+- Customer bidding, bid history, wins, and stats.
+- Vendor change requests for post-bid auction updates.
+- One-time popcorn bidding extension for last-minute bids.
+- Automatic auction expiry scheduler.
+- Socket.IO notification events.
+- Local image uploads for auction items.
 
-**Frontend:** React, Vite, Tailwind CSS, Socket.IO Client  
-**Backend:** Node.js, Express, Socket.IO, JWT, node-cron  
-**Database:** MySQL 8  
-**Storage:** Local file system
+## Tech Stack
 
-## 🚀 Quick Start
+Frontend:
 
-### Prerequisites
-- Node.js (v16+)
-- MySQL (v8+)
+- React
+- Vite
+- Tailwind CSS
+- Axios
+- Socket.IO Client
 
-### Installation
+Backend:
+
+- Node.js
+- Express
+- MySQL 8
+- Socket.IO
+- JWT
+- bcryptjs
+- multer
+
+## Project Structure
+
+```text
+backend/
+  config/        env parsing and deployment config
+  constants/     roles, statuses, shared constants
+  controllers/   request/response flow
+  middleware/    auth, role, JSON, origin checks
+  models/        MySQL queries and transactions
+  routes/        Express routes
+  services/      reusable auth/auction/scheduler helpers
+  utils/         cookies, JWT, HTTP fallback handlers
+  migrations/    database migration scripts
+
+frontend/
+  src/
+    api/         Axios client
+    components/  shared UI components
+    contexts/    auth/session context
+    hooks/       socket hooks
+    pages/       app pages
+
+docs/
+  api.md          Postman/API reference
+  architecture.md current backend architecture
+```
+
+## Prerequisites
+
+- Node.js 18 or newer
+- MySQL 8
+- npm
+
+## Setup
+
+Clone the repository:
 
 ```bash
-# Clone repository
-git clone https://github.com/YOUR_USERNAME/auction-bidding-system.git
-cd auction-bidding-system
+git clone <repo-url>
+cd <repo-folder>
+```
 
-# Setup Backend
+Install backend dependencies:
+
+```bash
 cd backend
 npm install
-cp .env.example .env  # Edit with your credentials
+```
 
-# Setup Frontend
+Create backend env file:
+
+```bash
+copy .env.example .env
+```
+
+Update `backend/.env` with your MySQL credentials and JWT secrets.
+
+Install frontend dependencies:
+
+```bash
 cd ../frontend
 npm install
+```
 
-# Setup Database
-mysql -u root -p
-CREATE DATABASE auction_db;
-USE auction_db;
-SOURCE database_setup.sql;
-exit;
+Create frontend env file:
 
-# Run Application
-# Terminal 1 - Backend
+```bash
+copy .env.example .env
+```
+
+Default local frontend env:
+
+```env
+VITE_API_URL=http://localhost:3000/api
+```
+
+## Database Setup
+
+Create and load the database schema:
+
+```bash
+mysql -u root -p < database_setup.sql
+```
+
+The setup creates:
+
+- `users`
+- `user_roles`
+- `auctions`
+- `bids`
+- `auction_change_requests`
+- `auction_audit_logs`
+
+Admin users are not publicly registerable. Create an admin manually in the database or seed one for local testing.
+
+## Running Locally
+
+Start backend:
+
+```bash
 cd backend
 npm start
+```
 
-# Terminal 2 - Frontend
+Backend runs on:
+
+```text
+http://localhost:3000
+```
+
+Start frontend:
+
+```bash
 cd frontend
 npm run dev
 ```
 
-Access: http://localhost:5173
+Frontend runs on:
 
-## 📁 Structure
-
-```
-├── backend/          # Express server, API routes
-├── frontend/         # React app
-└── database_setup.sql
+```text
+http://localhost:5173
 ```
 
-## 🔑 Environment Variables
+## Environment Notes
 
-**Backend (.env):**
+Backend uses these important env values:
+
 ```env
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=your_password
-DB_NAME=auction_db
-JWT_SECRET=your_jwt_secret
-PORT=3000
+RDS_HOST=localhost
+RDS_USER=root
+RDS_PASS=your_database_password_here
+RDS_DB=auction_db
+RDS_PORT=3306
+
+JWT_ACCESS_SECRET=change_this_access_secret
+JWT_REFRESH_SECRET=change_this_refresh_secret
+
+AUTH_COOKIE_SECURE=false
+AUTH_COOKIE_SAME_SITE=lax
+
+FRONTEND_ORIGINS=http://localhost:3000,http://localhost:5173
+UPLOAD_DIR=uploads
 ```
 
-## 📄 License
+For cross-domain HTTPS deployments, use:
 
-MIT License - see [LICENSE](LICENSE)
+```env
+AUTH_COOKIE_SECURE=true
+AUTH_COOKIE_SAME_SITE=none
+FRONTEND_ORIGINS=https://your-frontend-domain.com
+```
 
-## 👨‍💻 Author
+Do not store JWTs in localStorage. The frontend should use cookies with:
 
-**Ayush Mohite**  
-ayush.17740@sakec.ac.in
+```js
+withCredentials: true
+```
 
----
+## API Documentation
 
-Built with ❤️ using React, Node.js, Express, MySQL, and Socket.IO
+See [docs/api.md](docs/api.md) for:
+
+- Postman setup
+- Auth APIs
+- Vendor APIs
+- Customer APIs
+- Admin APIs
+- Recommended test order
+- Common error responses
+
+See [docs/architecture.md](docs/architecture.md) for the current backend architecture.
+
+## Useful Backend Scripts
+
+```bash
+npm start
+npm run dev
+```
+
+## Notes
+
+- `backend/uploads/` is local runtime storage and is ignored by git.
+- `.env` files are ignored by git. Commit only `.env.example`.
+- `node_modules/`, build output, logs, and generated archives should not be committed.
+
+## License
+
+MIT License. See [LICENSE](LICENSE).
+
+## Author
+
+Ayush Mohite
