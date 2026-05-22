@@ -6,7 +6,7 @@ const allowedAuctionImageTypes = new Set(["image/jpeg", "image/png", "image/webp
 const auctionImageUpload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: env.uploads.maxAuctionImageSizeMb * 1024 * 1024,
+    fileSize: env.images.maxAuctionImageSizeMb * 1024 * 1024,
   },
   fileFilter(req, file, callback) {
     if (!allowedAuctionImageTypes.has(file.mimetype)) {
@@ -25,7 +25,7 @@ export function uploadAuctionImage(req, res, next) {
 
     if (error instanceof multer.MulterError && error.code === "LIMIT_FILE_SIZE") {
       return res.status(413).json({
-        message: `Auction image must be ${env.uploads.maxAuctionImageSizeMb}MB or smaller.`,
+        message: `Auction image must be ${env.images.maxAuctionImageSizeMb}MB or smaller.`,
       });
     }
 

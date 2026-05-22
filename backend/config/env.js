@@ -72,8 +72,7 @@ export const env = {
     cookieSameSite,
     cookieSecure: parseBoolean(process.env.AUTH_COOKIE_SECURE, cookieSameSite === "none"),
   },
-  uploads: {
-    dir: process.env.UPLOAD_DIR || "uploads",
+  images: {
     maxAuctionImageSizeMb: parsePositiveNumber(process.env.MAX_AUCTION_IMAGE_SIZE_MB, 5),
   },
   imagekit: {

@@ -108,5 +108,6 @@ VITE_API_URL=https://your-backend-domain.com/api
 - Auction images are uploaded server-side to ImageKit after Sharp converts them to WebP.
 - Keep `IMAGEKIT_PRIVATE_KEY` only in backend environment variables.
 - `MAX_AUCTION_IMAGE_SIZE_MB=5` protects free-tier image and compute usage.
+- Do not use backend local filesystem storage for user-uploaded auction images.
 - Keep JWT secrets long, random, and different in production.
 - Keep `SOCKET_DEBUG=false` unless diagnosing realtime connection behavior.

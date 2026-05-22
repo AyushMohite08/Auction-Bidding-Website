@@ -179,7 +179,6 @@ AUTH_COOKIE_SECURE=false
 AUTH_COOKIE_SAME_SITE=lax
 
 FRONTEND_ORIGINS=http://localhost:3000,http://localhost:5173
-UPLOAD_DIR=uploads
 MAX_AUCTION_IMAGE_SIZE_MB=5
 IMAGEKIT_PRIVATE_KEY=private_your_imagekit_private_key
 IMAGEKIT_PUBLIC_KEY=public_your_imagekit_public_key
@@ -227,7 +226,7 @@ npm run dev
 
 ## Notes
 
-- `backend/uploads/` is kept only for legacy local images and is ignored by git. New auction images upload to ImageKit.
+- Auction images upload to ImageKit; do not rely on backend local filesystem storage for user uploads.
 - `.env` files are ignored by git. Commit only `.env.example`.
 - `node_modules/`, build output, logs, and generated archives should not be committed.
 

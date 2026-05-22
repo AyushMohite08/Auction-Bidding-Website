@@ -16,10 +16,6 @@ frontend/.env
 .env.local
 .env.production
 
-# Uploaded files (images stored locally)
-backend/uploads/
-uploads/
-
 # Logs
 *.log
 npm-debug.log*

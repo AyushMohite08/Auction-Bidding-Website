@@ -1,8 +1,6 @@
 import express from "express";
 import http from "http";
 import cors from "cors";
-import path from "path";
-import { fileURLToPath } from "url";
 import { Server } from "socket.io";
 import { env } from "./config/env.js";
 import auctionRoutes from "./routes/auctionRoutes.js";
@@ -13,9 +11,6 @@ import { readCookie } from "./utils/cookies.js";
 import { verifyAccessToken } from "./utils/jwt.js";
 import { startScheduler } from "./services/schedulerService.js";
 import * as rdsModel from "./models/rdsModel.js";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const app = express();
 const server = http.createServer(app);
@@ -73,7 +68,6 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use("/uploads", express.static(path.join(__dirname, env.uploads.dir)));
 app.use("/api", auctionRoutes);
 app.use("/api/auth", authRoutes);
 
