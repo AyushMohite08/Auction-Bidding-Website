@@ -1,13 +1,11 @@
 import express from "express";
-import multer from "multer";
-import { env } from "../config/env.js";
 import * as auctionController from "../controllers/auctionController.js";
 import { requireAuth, requireRole, requireCustomerSelfOrAdmin } from "../middleware/authMiddleware.js";
 import { requireJson } from "../middleware/contentTypeMiddleware.js";
+import { uploadAuctionImage } from "../middleware/uploadMiddleware.js";
 import { USER_ROLES } from "../constants/appConstants.js";
 
 const router = express.Router();
-const upload = multer({ dest: env.uploads.dir });
 
 router.get("/auctions", auctionController.listAuctions);
 router.get("/auctions/active", auctionController.listActiveAuctions);
@@ -18,7 +16,7 @@ router.post(
   "/vendor/upload",
   requireAuth,
   requireRole(USER_ROLES.VENDOR),
-  upload.single("itemImage"),
+  uploadAuctionImage,
   auctionController.createVendorAuction
 );
 router.get("/vendor/auctions", requireAuth, requireRole(USER_ROLES.VENDOR), auctionController.listVendorAuctions);
@@ -26,7 +24,7 @@ router.patch(
   "/vendor/auctions/:id",
   requireAuth,
   requireRole(USER_ROLES.VENDOR),
-  upload.single("itemImage"),
+  uploadAuctionImage,
   auctionController.updateVendorAuction
 );
 router.delete(
@@ -92,7 +90,7 @@ router.patch(
   "/admin/auctions/:id",
   requireAuth,
   requireRole(USER_ROLES.ADMIN),
-  upload.single("itemImage"),
+  uploadAuctionImage,
   auctionController.updateAdminAuction
 );
 router.get(

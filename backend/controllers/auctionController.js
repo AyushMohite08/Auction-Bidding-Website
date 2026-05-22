@@ -1,6 +1,7 @@
 import { ACTIVE_AUCTION_STATUSES, ADMIN_AUCTION_STATUSES, AUCTION_STATUSES } from "../constants/appConstants.js";
 import * as rdsModel from "../models/rdsModel.js";
 import * as auctionService from "../services/auctionService.js";
+import * as imageService from "../services/imageService.js";
 import { sendNotificationEvent } from "../services/notificationService.js";
 
 export async function listAuctions(req, res) {
@@ -65,12 +66,13 @@ export async function createVendorAuction(req, res) {
   }
 
   try {
+    const uploadedImage = await imageService.uploadAuctionImage(req.file);
     const auction = await rdsModel.createAuction({
       vendor_id: req.user.id,
       item_name: String(itemName).trim(),
       description: String(description).trim(),
       min_bid: parsedMinBid,
-      image_url: `/uploads/${req.file.filename}`,
+      image_url: uploadedImage.url,
       start_time: auctionService.formatDateForDb(startTime),
       end_time: auctionService.formatDateForDb(endTime),
       ...popcornSettings,
@@ -83,6 +85,9 @@ export async function createVendorAuction(req, res) {
 
     return res.status(201).json({ message: "Auction created successfully.", auction });
   } catch (error) {
+    if (imageService.isImageServiceError(error)) {
+      return res.status(error.status).json({ message: error.message });
+    }
     console.error("Auction submission error:", error);
     return res.status(500).json({ message: "Failed to create auction." });
   }
@@ -187,8 +192,9 @@ export async function updateVendorAuction(req, res) {
       });
     }
 
-    const updates = auctionService.normalizeAuctionChanges(req.body, req.file, allowedFields);
-    const updateError = auctionService.validateAuctionUpdates(updates);
+    const hasImageUpdate = Boolean(req.file && allowedFields.includes("image_url"));
+    const updates = auctionService.normalizeAuctionChanges(req.body, allowedFields);
+    const updateError = auctionService.validateAuctionUpdates(updates, { hasImageUpdate });
     if (updateError) {
       return res.status(400).json({ message: updateError });
     }
@@ -196,6 +202,10 @@ export async function updateVendorAuction(req, res) {
     const dateError = auctionService.validateAuctionUpdateDates(auction, updates);
     if (dateError) {
       return res.status(400).json({ message: dateError });
+    }
+    if (hasImageUpdate) {
+      const uploadedImage = await imageService.uploadAuctionImage(req.file);
+      updates.image_url = uploadedImage.url;
     }
 
     const updatedAuction = await rdsModel.updateAuctionFields(auctionId, updates);
@@ -213,6 +223,9 @@ export async function updateVendorAuction(req, res) {
 
     return res.status(200).json({ message: "Auction updated successfully.", auction: updatedAuction });
   } catch (error) {
+    if (imageService.isImageServiceError(error)) {
+      return res.status(error.status).json({ message: error.message });
+    }
     console.error("Vendor auction update error:", error);
     return res.status(500).json({ message: "Failed to update auction." });
   }
@@ -319,8 +332,9 @@ export async function updateAdminAuction(req, res) {
       return res.status(400).json({ message: "Reason is required for admin edits after bids exist." });
     }
 
-    const updates = auctionService.normalizeAuctionChanges(req.body, req.file, allowedFields);
-    const updateError = auctionService.validateAuctionUpdates(updates);
+    const hasImageUpdate = Boolean(req.file && allowedFields.includes("image_url"));
+    const updates = auctionService.normalizeAuctionChanges(req.body, allowedFields);
+    const updateError = auctionService.validateAuctionUpdates(updates, { hasImageUpdate });
     if (updateError) {
       return res.status(400).json({ message: updateError });
     }
@@ -328,6 +342,10 @@ export async function updateAdminAuction(req, res) {
     const dateError = auctionService.validateAuctionUpdateDates(auction, updates);
     if (dateError) {
       return res.status(400).json({ message: dateError });
+    }
+    if (hasImageUpdate) {
+      const uploadedImage = await imageService.uploadAuctionImage(req.file);
+      updates.image_url = uploadedImage.url;
     }
 
     const updatedAuction = await rdsModel.updateAuctionFields(auctionId, updates);
@@ -346,6 +364,9 @@ export async function updateAdminAuction(req, res) {
 
     return res.status(200).json({ message: "Auction updated successfully.", auction: updatedAuction });
   } catch (error) {
+    if (imageService.isImageServiceError(error)) {
+      return res.status(error.status).json({ message: error.message });
+    }
     console.error("Admin auction update error:", error);
     return res.status(500).json({ message: "Failed to update auction." });
   }

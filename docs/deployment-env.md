@@ -24,6 +24,11 @@ Backend `.env`:
 AUTH_COOKIE_SECURE=false
 AUTH_COOKIE_SAME_SITE=lax
 FRONTEND_ORIGINS=http://localhost:5173,http://localhost:3000
+MAX_AUCTION_IMAGE_SIZE_MB=5
+IMAGEKIT_PRIVATE_KEY=private_your_imagekit_private_key
+IMAGEKIT_PUBLIC_KEY=public_your_imagekit_public_key
+IMAGEKIT_URL_ENDPOINT=https://ik.imagekit.io/your_imagekit_id
+IMAGEKIT_UPLOAD_FOLDER=/auction-items
 ```
 
 Frontend `.env`:
@@ -100,5 +105,8 @@ VITE_API_URL=https://your-backend-domain.com/api
 - Local HTTP development should use `AUTH_COOKIE_SECURE=false` and `AUTH_COOKIE_SAME_SITE=lax`.
 - `FRONTEND_ORIGINS` must contain exact frontend origins, including protocol and port.
 - Do not include URL paths in `FRONTEND_ORIGINS`.
+- Auction images are uploaded server-side to ImageKit after Sharp converts them to WebP.
+- Keep `IMAGEKIT_PRIVATE_KEY` only in backend environment variables.
+- `MAX_AUCTION_IMAGE_SIZE_MB=5` protects free-tier image and compute usage.
 - Keep JWT secrets long, random, and different in production.
 - Keep `SOCKET_DEBUG=false` unless diagnosing realtime connection behavior.

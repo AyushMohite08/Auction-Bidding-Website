@@ -20,6 +20,11 @@ function parseDurationMs(value, fallback) {
   return Number.isFinite(number) && number > 0 ? number : fallback;
 }
 
+function parsePositiveNumber(value, fallback) {
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0 ? number : fallback;
+}
+
 function parseSameSite(value) {
   const sameSite = String(value || "lax").toLowerCase();
   return ["lax", "strict", "none"].includes(sameSite) ? sameSite : "lax";
@@ -69,6 +74,13 @@ export const env = {
   },
   uploads: {
     dir: process.env.UPLOAD_DIR || "uploads",
+    maxAuctionImageSizeMb: parsePositiveNumber(process.env.MAX_AUCTION_IMAGE_SIZE_MB, 5),
+  },
+  imagekit: {
+    privateKey: process.env.IMAGEKIT_PRIVATE_KEY || "",
+    publicKey: process.env.IMAGEKIT_PUBLIC_KEY || "",
+    urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT || "",
+    uploadFolder: process.env.IMAGEKIT_UPLOAD_FOLDER || "/auction-items",
   },
   socketDebug: parseBoolean(process.env.SOCKET_DEBUG, false),
 };

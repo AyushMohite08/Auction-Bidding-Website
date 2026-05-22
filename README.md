@@ -16,7 +16,7 @@ The backend currently supports secure HttpOnly cookie authentication, role-based
 - One-time popcorn bidding extension for last-minute bids, capped at 5 extension minutes and a 300-second trigger window.
 - Automatic auction expiry scheduler.
 - Socket.IO notification events.
-- Local image uploads for auction items.
+- ImageKit-backed WebP auction image uploads with a 5MB input cap.
 
 ## Tech Stack
 
@@ -180,6 +180,11 @@ AUTH_COOKIE_SAME_SITE=lax
 
 FRONTEND_ORIGINS=http://localhost:3000,http://localhost:5173
 UPLOAD_DIR=uploads
+MAX_AUCTION_IMAGE_SIZE_MB=5
+IMAGEKIT_PRIVATE_KEY=private_your_imagekit_private_key
+IMAGEKIT_PUBLIC_KEY=public_your_imagekit_public_key
+IMAGEKIT_URL_ENDPOINT=https://ik.imagekit.io/your_imagekit_id
+IMAGEKIT_UPLOAD_FOLDER=/auction-items
 SOCKET_DEBUG=false
 ```
 
@@ -222,7 +227,7 @@ npm run dev
 
 ## Notes
 
-- `backend/uploads/` is local runtime storage and is ignored by git.
+- `backend/uploads/` is kept only for legacy local images and is ignored by git. New auction images upload to ImageKit.
 - `.env` files are ignored by git. Commit only `.env.example`.
 - `node_modules/`, build output, logs, and generated archives should not be committed.
 

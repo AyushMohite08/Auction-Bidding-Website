@@ -58,7 +58,7 @@ export function getPopcornSettings(body) {
   };
 }
 
-export function normalizeAuctionChanges(body, file, allowedFields) {
+export function normalizeAuctionChanges(body, allowedFields) {
   const updates = {};
 
   if (allowedFields.includes("item_name") && body.itemName !== undefined) {
@@ -75,9 +75,6 @@ export function normalizeAuctionChanges(body, file, allowedFields) {
   }
   if (allowedFields.includes("end_time") && body.endTime !== undefined) {
     updates.end_time = formatDateForDb(body.endTime);
-  }
-  if (allowedFields.includes("image_url") && file) {
-    updates.image_url = `/uploads/${file.filename}`;
   }
   if (allowedFields.includes("popcorn_enabled") && body.popcornEnabled !== undefined) {
     updates.popcorn_enabled = parseBoolean(body.popcornEnabled) ? 1 : 0;
@@ -159,8 +156,8 @@ export function getAdminEditableFields(hasBids) {
   ];
 }
 
-export function validateAuctionUpdates(updates) {
-  if (Object.keys(updates).length === 0) {
+export function validateAuctionUpdates(updates, options = {}) {
+  if (Object.keys(updates).length === 0 && !options.hasImageUpdate) {
     return "No valid auction fields provided.";
   }
   if (updates.min_bid === null) {

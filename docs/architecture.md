@@ -7,7 +7,7 @@ This document describes the current backend architecture. It is intentionally si
 - `backend/server.js` creates the Express app, HTTP server, Socket.IO server, CORS config, static upload serving, and route mounts.
 - Public auction routes are mounted at `/api`.
 - Auth routes are mounted at `/api/auth`.
-- Uploaded auction images are served from `/uploads`.
+- New auction images are optimized to WebP and uploaded to ImageKit. Legacy local images can still be served from `/uploads`.
 - The expiry scheduler starts with the server and checks ended auctions every minute.
 - Socket.IO currently broadcasts notification events through `new_notification`.
 
@@ -24,17 +24,18 @@ backend/
   services/      reusable business/security helpers
   utils/         cookies, JWT, and fallback HTTP handlers
   migrations/    incremental DB migration scripts
-  uploads/       local uploaded files, ignored by git
+  uploads/       legacy local uploaded files, ignored by git
 ```
 
 Current key files:
 
-- `config/env.js`: reads env values for DB, CORS origins, cookie/JWT settings, and uploads.
+- `config/env.js`: reads env values for DB, CORS origins, cookie/JWT settings, uploads, and ImageKit.
 - `models/rdsModel.js`: MySQL data layer and transaction helper.
 - `controllers/authController.js`: auth/profile/account endpoints.
 - `controllers/auctionController.js`: auction, bidding, change-request, vendor, customer, and admin endpoint flow.
 - `services/authService.js`: email/password validation, bcrypt, token issuing, safe user output.
 - `services/auctionService.js`: auction parsing, date formatting, edit-field helpers, and validation helpers.
+- `services/imageService.js`: auction image optimization and ImageKit upload.
 
 ## Request Flow
 
@@ -65,7 +66,7 @@ Main tables:
 
 - `users`: one row per email, profile fields, password hash, soft-delete columns.
 - `user_roles`: many roles per user without duplicating the user row.
-- `auctions`: auction details, status, bid prices, winner, popcorn settings, and local image URL.
+- `auctions`: auction details, status, bid prices, winner, popcorn settings, and image URL.
 - `bids`: bid history for each auction.
 - `auction_change_requests`: vendor requests for post-bid/post-start controlled changes.
 - `auction_audit_logs`: admin/vendor status changes, edits, cancellations, and request decisions.
@@ -135,7 +136,7 @@ When a valid bid lands inside the trigger window and the auction has not already
 - Configure frontend origins with `FRONTEND_ORIGINS`.
 - Cross-domain cookie deployments should use `AUTH_COOKIE_SAME_SITE=none` and `AUTH_COOKIE_SECURE=true`.
 - Local development can use same-site lax cookies.
-- The current storage is local disk under `backend/uploads`.
+- New auction images are stored in ImageKit after Sharp WebP optimization; local `/uploads` remains for older images.
 - The current database is MySQL through `mysql2/promise`.
 - Realtime UI refreshes use Socket.IO `new_notification` events with minimal auction/request identifiers.
 - Run the auction expiry scheduler in only one backend instance, or move it to a dedicated worker for scaled deployments.

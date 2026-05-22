@@ -29,6 +29,7 @@ Content-Type: application/json
 ```
 
 For file upload requests, use `form-data` and let Postman set the multipart `Content-Type` automatically.
+Auction images must be JPG, PNG, WebP, or AVIF and 5MB or smaller. The backend optimizes accepted images to WebP and stores the ImageKit URL.
 
 Seeded local admin:
 
