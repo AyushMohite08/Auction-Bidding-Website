@@ -115,6 +115,18 @@ export async function getAuctionsByVendorId(vendorId) {
   return rows;
 }
 
+export async function countVendorAuctionsCreatedThisMonth(vendorId) {
+  const query = `
+    SELECT COUNT(*) AS count
+    FROM auctions
+    WHERE vendor_id = ?
+      AND created_at >= DATE_FORMAT(CURRENT_DATE(), '%Y-%m-01')
+      AND created_at < DATE_ADD(DATE_FORMAT(CURRENT_DATE(), '%Y-%m-01'), INTERVAL 1 MONTH)
+  `;
+  const [rows] = await pool.execute(query, [vendorId]);
+  return Number(rows[0]?.count || 0);
+}
+
 export async function findUserByEmail(email, role = null) {
   const params = [email];
   const roleFilter = role ? "AND ur.role = ?" : "";

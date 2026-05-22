@@ -25,6 +25,11 @@ function parsePositiveNumber(value, fallback) {
   return Number.isFinite(number) && number > 0 ? number : fallback;
 }
 
+function parsePositiveInteger(value, fallback) {
+  const number = Number(value);
+  return Number.isInteger(number) && number > 0 ? number : fallback;
+}
+
 function parseSameSite(value) {
   const sameSite = String(value || "lax").toLowerCase();
   return ["lax", "strict", "none"].includes(sameSite) ? sameSite : "lax";
@@ -81,5 +86,13 @@ export const env = {
     urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT || "",
     uploadFolder: process.env.IMAGEKIT_UPLOAD_FOLDER || "/auction-items",
   },
+  rateLimits: {
+    generalMax: parsePositiveInteger(Number(process.env.RATE_LIMIT_GENERAL_MAX), 600),
+    authMax: parsePositiveInteger(Number(process.env.RATE_LIMIT_AUTH_MAX), 5),
+    registerMax: parsePositiveInteger(Number(process.env.RATE_LIMIT_REGISTER_MAX), 5),
+    bidMax: parsePositiveInteger(Number(process.env.RATE_LIMIT_BID_MAX), 30),
+    auctionCreateMax: parsePositiveInteger(Number(process.env.RATE_LIMIT_AUCTION_CREATE_MAX), 10),
+  },
+  vendorMonthlyAuctionLimit: parsePositiveInteger(Number(process.env.VENDOR_MONTHLY_AUCTION_LIMIT), 20),
   socketDebug: parseBoolean(process.env.SOCKET_DEBUG, false),
 };

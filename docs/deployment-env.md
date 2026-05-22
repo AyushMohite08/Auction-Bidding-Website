@@ -29,6 +29,12 @@ IMAGEKIT_PRIVATE_KEY=private_your_imagekit_private_key
 IMAGEKIT_PUBLIC_KEY=public_your_imagekit_public_key
 IMAGEKIT_URL_ENDPOINT=https://ik.imagekit.io/your_imagekit_id
 IMAGEKIT_UPLOAD_FOLDER=/auction-items
+RATE_LIMIT_GENERAL_MAX=600
+RATE_LIMIT_AUTH_MAX=5
+RATE_LIMIT_REGISTER_MAX=5
+RATE_LIMIT_BID_MAX=30
+RATE_LIMIT_AUCTION_CREATE_MAX=10
+VENDOR_MONTHLY_AUCTION_LIMIT=20
 ```
 
 Frontend `.env`:
@@ -109,5 +115,7 @@ VITE_API_URL=https://your-backend-domain.com/api
 - Keep `IMAGEKIT_PRIVATE_KEY` only in backend environment variables.
 - `MAX_AUCTION_IMAGE_SIZE_MB=5` protects free-tier image and compute usage.
 - Do not use backend local filesystem storage for user-uploaded auction images.
+- Rate limits use in-memory counters in this version, which is enough for one backend instance.
+- `VENDOR_MONTHLY_AUCTION_LIMIT` blocks new vendor auction creation after the monthly limit is reached.
 - Keep JWT secrets long, random, and different in production.
 - Keep `SOCKET_DEBUG=false` unless diagnosing realtime connection behavior.

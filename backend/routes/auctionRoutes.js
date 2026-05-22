@@ -2,6 +2,7 @@ import express from "express";
 import * as auctionController from "../controllers/auctionController.js";
 import { requireAuth, requireRole, requireCustomerSelfOrAdmin } from "../middleware/authMiddleware.js";
 import { requireJson } from "../middleware/contentTypeMiddleware.js";
+import { auctionCreateLimiter, bidLimiter, enforceVendorMonthlyAuctionLimit } from "../middleware/rateLimitMiddleware.js";
 import { uploadAuctionImage } from "../middleware/uploadMiddleware.js";
 import { USER_ROLES } from "../constants/appConstants.js";
 
@@ -16,6 +17,8 @@ router.post(
   "/vendor/upload",
   requireAuth,
   requireRole(USER_ROLES.VENDOR),
+  auctionCreateLimiter,
+  enforceVendorMonthlyAuctionLimit,
   uploadAuctionImage,
   auctionController.createVendorAuction
 );
@@ -57,6 +60,7 @@ router.post(
   "/customer/bid",
   requireAuth,
   requireRole(USER_ROLES.CUSTOMER),
+  bidLimiter,
   requireJson,
   auctionController.placeBid
 );

@@ -52,6 +52,7 @@ CREATE TABLE IF NOT EXISTS `auctions` (
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `vendor_id` (`vendor_id`),
+  KEY `idx_auctions_vendor_created_at` (`vendor_id`, `created_at`),
   KEY `winner_user_id` (`winner_user_id`),
   CONSTRAINT `auctions_ibfk_1` FOREIGN KEY (`vendor_id`) REFERENCES `users` (`id`),
   CONSTRAINT `auctions_winner_fk` FOREIGN KEY (`winner_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL

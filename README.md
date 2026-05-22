@@ -17,6 +17,7 @@ The backend currently supports secure HttpOnly cookie authentication, role-based
 - Automatic auction expiry scheduler.
 - Socket.IO notification events.
 - ImageKit-backed WebP auction image uploads with a 5MB input cap.
+- Basic API/auth/bid rate limits and a monthly vendor auction creation quota.
 
 ## Tech Stack
 
@@ -185,6 +186,13 @@ IMAGEKIT_PUBLIC_KEY=public_your_imagekit_public_key
 IMAGEKIT_URL_ENDPOINT=https://ik.imagekit.io/your_imagekit_id
 IMAGEKIT_UPLOAD_FOLDER=/auction-items
 SOCKET_DEBUG=false
+
+RATE_LIMIT_GENERAL_MAX=600
+RATE_LIMIT_AUTH_MAX=5
+RATE_LIMIT_REGISTER_MAX=5
+RATE_LIMIT_BID_MAX=30
+RATE_LIMIT_AUCTION_CREATE_MAX=10
+VENDOR_MONTHLY_AUCTION_LIMIT=20
 ```
 
 For cross-domain HTTPS deployments, use:
@@ -227,6 +235,8 @@ npm run dev
 ## Notes
 
 - Auction images upload to ImageKit; do not rely on backend local filesystem storage for user uploads.
+- Default rate limits are in-memory and best suited to single-instance deployments. Use a shared store before scaling to multiple backend instances.
+- `VENDOR_MONTHLY_AUCTION_LIMIT` counts every auction a vendor creates in the current database calendar month, including rejected or cancelled auctions.
 - `.env` files are ignored by git. Commit only `.env.example`.
 - `node_modules/`, build output, logs, and generated archives should not be committed.
 

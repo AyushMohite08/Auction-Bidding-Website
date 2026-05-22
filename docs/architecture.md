@@ -28,10 +28,11 @@ backend/
 
 Current key files:
 
-- `config/env.js`: reads env values for DB, CORS origins, cookie/JWT settings, image limits, and ImageKit.
+- `config/env.js`: reads env values for DB, CORS origins, cookie/JWT settings, image limits, ImageKit, and rate limits.
 - `models/rdsModel.js`: MySQL data layer and transaction helper.
 - `controllers/authController.js`: auth/profile/account endpoints.
 - `controllers/auctionController.js`: auction, bidding, change-request, vendor, customer, and admin endpoint flow.
+- `middleware/rateLimitMiddleware.js`: lightweight API/auth/bid/create limits and vendor monthly quota checks.
 - `services/authService.js`: email/password validation, bcrypt, token issuing, safe user output.
 - `services/auctionService.js`: auction parsing, date formatting, edit-field helpers, and validation helpers.
 - `services/imageService.js`: auction image optimization and ImageKit upload.
@@ -75,6 +76,7 @@ Important rules:
 - Bid writes, auction locking, auction deletion/cancellation, and expiry processing use transactions.
 - Historical bids and auction records are preserved when users are soft deleted.
 - Vendor-created auctions start as `pending`.
+- Vendor auction creation is capped by `VENDOR_MONTHLY_AUCTION_LIMIT` per database calendar month.
 
 ## Auction Lifecycle
 
@@ -89,6 +91,7 @@ pending/rejected -> cancelled
 Behavior:
 
 - Vendor creates auctions in `pending`.
+- Vendor creation is rate limited and checked against the monthly quota before image processing.
 - Admin approves or rejects pending auctions.
 - Customers can bid only on approved/active auctions that have started and not ended.
 - Bid amount must be higher than current bid or minimum bid.

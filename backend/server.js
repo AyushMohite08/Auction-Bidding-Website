@@ -6,6 +6,7 @@ import { env } from "./config/env.js";
 import auctionRoutes from "./routes/auctionRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import { requireAllowedOrigin } from "./middleware/securityMiddleware.js";
+import { generalApiLimiter } from "./middleware/rateLimitMiddleware.js";
 import { errorHandler, notFoundHandler } from "./utils/http.js";
 import { readCookie } from "./utils/cookies.js";
 import { verifyAccessToken } from "./utils/jwt.js";
@@ -68,6 +69,7 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use("/api", generalApiLimiter);
 app.use("/api", auctionRoutes);
 app.use("/api/auth", authRoutes);
 

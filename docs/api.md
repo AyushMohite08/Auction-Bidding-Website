@@ -318,6 +318,8 @@ Expected:
 Notes:
 
 - New vendor auctions default to `pending`.
+- Vendor auction creation is rate limited and capped by `VENDOR_MONTHLY_AUCTION_LIMIT` per database calendar month.
+- Rejected and cancelled auctions still count toward that monthly total.
 - `startTime` and `endTime` can be ISO strings.
 - Popcorn settings are optional. Defaults are disabled, 5 extension minutes, 60 trigger seconds.
 - `popcornExtensionMinutes` must be between `1` and `5`.
