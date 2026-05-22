@@ -5,7 +5,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { compactError } from "../utils/formatters";
 
 export default function AccountPage() {
-  const { user, roles, updateProfile } = useAuth();
+  const { user, updateProfile } = useAuth();
   const [form, setForm] = useState({ name: user?.name || "", contact_info: user?.contact_info || "" });
   const [toast, setToast] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -32,18 +32,14 @@ export default function AccountPage() {
       </div>
 
       <div className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="mb-5 grid gap-4 rounded-md bg-slate-50 p-4 text-sm sm:grid-cols-3">
+        <div className="mb-5 grid gap-4 rounded-md bg-slate-50 p-4 text-sm sm:grid-cols-2">
           <div>
             <p className="text-slate-500">Email</p>
             <p className="font-medium text-slate-950">{user.email}</p>
           </div>
           <div>
-            <p className="text-slate-500">Current role</p>
+            <p className="text-slate-500">Role</p>
             <p className="font-medium capitalize text-slate-950">{user.role}</p>
-          </div>
-          <div>
-            <p className="text-slate-500">Available roles</p>
-            <p className="font-medium capitalize text-slate-950">{roles.length ? roles.join(", ") : user.role}</p>
           </div>
         </div>
 

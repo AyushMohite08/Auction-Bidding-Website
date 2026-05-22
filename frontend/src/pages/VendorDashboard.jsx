@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { CheckCircle, Edit, Eye, Lock, Plus, Search, Send, Trash2 } from "lucide-react";
 import { auctionApi } from "../api/auctionApi";
 import AuctionForm, { emptyAuctionForm } from "../components/AuctionForm";
@@ -13,12 +13,15 @@ import {
   ACTIVE_STATUSES,
   CLOSED_STATUSES,
   compactError,
+  displayStatusForAuction,
   formatCurrency,
   formatDateTime,
+  getAuctionDisplayStatus,
   parseRequestedChanges,
   priceForAuction,
   toInputDateTime,
 } from "../utils/formatters";
+import { auctionDetailState } from "../utils/navigation";
 
 const tabs = [
   { id: "pending", label: "Pending" },
@@ -28,10 +31,10 @@ const tabs = [
 ];
 
 export default function VendorDashboard() {
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [auctions, setAuctions] = useState([]);
   const [requests, setRequests] = useState([]);
-  const [tab, setTab] = useState("pending");
-  const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [toast, setToast] = useState(null);
@@ -39,6 +42,8 @@ export default function VendorDashboard() {
   const [editState, setEditState] = useState(null);
   const [requestState, setRequestState] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const tab = tabs.some((item) => item.id === searchParams.get("tab")) ? searchParams.get("tab") : "pending";
+  const query = searchParams.get("q") || "";
 
   const load = useCallback(async () => {
     try {
@@ -72,23 +77,38 @@ export default function VendorDashboard() {
   );
 
   const normalizedQuery = query.trim().toLowerCase();
-  const visibleAuctions = useMemo(() => {
-    return auctions.filter((auction) => {
-      if (normalizedQuery && !`${auction.item_name} ${auction.description}`.toLowerCase().includes(normalizedQuery)) return false;
-      if (tab === "pending") return auction.status === "pending";
-      if (tab === "live") return ACTIVE_STATUSES.includes(auction.status);
-      if (tab === "closed") return CLOSED_STATUSES.includes(auction.status);
-      return true;
-    });
-  }, [auctions, normalizedQuery, tab]);
+  const visibleAuctions = auctions.filter((auction) => {
+    if (normalizedQuery && !`${auction.item_name} ${auction.description}`.toLowerCase().includes(normalizedQuery)) return false;
+    const displayStatus = getAuctionDisplayStatus(auction);
+    if (tab === "pending") return displayStatus === "pending";
+    if (tab === "live") return ACTIVE_STATUSES.includes(displayStatus);
+    if (tab === "closed") return CLOSED_STATUSES.includes(displayStatus);
+    return true;
+  });
+  const visibleRequests = requests.filter((request) => !normalizedQuery || `${request.item_name} ${request.status} ${request.reason} ${request.admin_note}`.toLowerCase().includes(normalizedQuery));
 
   const stats = useMemo(() => ({
     total: auctions.length,
-    pending: auctions.filter((a) => a.status === "pending").length,
-    live: auctions.filter((a) => ACTIVE_STATUSES.includes(a.status)).length,
-    sold: auctions.filter((a) => a.status === "sold").length,
-    revenue: auctions.filter((a) => a.status === "sold").reduce((sum, a) => sum + Number(a.locked_price || a.current_bid || 0), 0),
+    pending: auctions.filter((a) => getAuctionDisplayStatus(a) === "pending").length,
+    live: auctions.filter((a) => ACTIVE_STATUSES.includes(getAuctionDisplayStatus(a))).length,
+    sold: auctions.filter((a) => getAuctionDisplayStatus(a) === "sold").length,
+    revenue: auctions.filter((a) => getAuctionDisplayStatus(a) === "sold").reduce((sum, a) => sum + Number(a.locked_price || a.current_bid || 0), 0),
   }), [auctions]);
+
+  const setTab = (nextTab) => {
+    const next = new URLSearchParams(searchParams);
+    next.set("tab", nextTab);
+    if (!query.trim()) next.delete("q");
+    setSearchParams(next, { replace: true });
+  };
+
+  const setQuery = (nextQuery) => {
+    const next = new URLSearchParams(searchParams);
+    next.set("tab", tab);
+    if (nextQuery.trim()) next.set("q", nextQuery);
+    else next.delete("q");
+    setSearchParams(next, { replace: true });
+  };
 
   const createAuction = async (event) => {
     event.preventDefault();
@@ -193,18 +213,32 @@ export default function VendorDashboard() {
   };
 
   const auctionColumns = [
-    { key: "item_name", header: "Auction", render: (auction) => <div><p className="font-medium text-slate-950">{auction.item_name}</p><p className="text-xs text-slate-500">{formatDateTime(auction.start_time)} to {formatDateTime(auction.end_time)}</p></div> },
-    { key: "status", header: "Status", render: (auction) => <StatusBadge status={auction.status} /> },
-    { key: "price", header: "Price", render: (auction) => formatCurrency(priceForAuction(auction)) },
-    { key: "popcorn", header: "Popcorn", render: (auction) => auction.popcorn_enabled ? "Enabled" : "Off" },
+    {
+      key: "item_name",
+      header: "Auction",
+      width: "w-[34%]",
+      render: (auction) => (
+        <div className="min-w-0">
+          <Link to={`/auction/${auction.id}`} state={auctionDetailState(location)} className="block truncate font-medium text-slate-950 hover:underline">{auction.item_name}</Link>
+          <p className="truncate text-xs text-slate-500">{formatDateTime(auction.start_time)} to {formatDateTime(auction.end_time)}</p>
+        </div>
+      ),
+    },
+    { key: "status", header: "Status", width: "w-32", render: (auction) => {
+      const badge = displayStatusForAuction(auction);
+      return <StatusBadge status={badge.status}>{badge.label}</StatusBadge>;
+    } },
+    { key: "price", header: "Price", width: "w-32", render: (auction) => formatCurrency(priceForAuction(auction)) },
+    { key: "popcorn", header: "Popcorn", width: "w-28", render: (auction) => auction.popcorn_enabled ? "Enabled" : "Off" },
     {
       key: "actions",
       header: "",
+      width: "w-44",
       render: (auction) => (
         <div className="flex flex-wrap justify-end gap-2">
-          <Link to={`/auction/${auction.id}`} className="rounded-md border border-slate-300 p-2 text-slate-600 hover:bg-slate-100" title="View"><Eye className="h-4 w-4" /></Link>
-          {!["sold", "expired", "cancelled"].includes(auction.status) && <button type="button" onClick={() => openEdit(auction)} className="rounded-md border border-slate-300 p-2 text-slate-600 hover:bg-slate-100" title="Edit or request change"><Edit className="h-4 w-4" /></button>}
-          {ACTIVE_STATUSES.includes(auction.status) && <button type="button" onClick={() => lockAuction(auction)} className="rounded-md border border-slate-300 p-2 text-slate-600 hover:bg-slate-100" title="Lock"><Lock className="h-4 w-4" /></button>}
+          <Link to={`/auction/${auction.id}`} state={auctionDetailState(location)} className="rounded-md border border-slate-300 p-2 text-slate-600 hover:bg-slate-100" title="View auction"><Eye className="h-4 w-4" /></Link>
+          {!["sold", "expired", "cancelled"].includes(getAuctionDisplayStatus(auction)) && <button type="button" onClick={() => openEdit(auction)} className="rounded-md border border-slate-300 p-2 text-slate-600 hover:bg-slate-100" title="Edit or request change"><Edit className="h-4 w-4" /></button>}
+          {getAuctionDisplayStatus(auction) === "active" && <button type="button" onClick={() => lockAuction(auction)} className="rounded-md border border-slate-300 p-2 text-slate-600 hover:bg-slate-100" title="Lock"><Lock className="h-4 w-4" /></button>}
           {["pending", "rejected"].includes(auction.status) && <button type="button" onClick={() => cancelAuction(auction)} className="rounded-md border border-rose-200 p-2 text-rose-600 hover:bg-rose-50" title="Cancel"><Trash2 className="h-4 w-4" /></button>}
         </div>
       ),
@@ -212,12 +246,13 @@ export default function VendorDashboard() {
   ];
 
   const requestColumns = [
-    { key: "item_name", header: "Auction", render: (request) => <span className="font-medium text-slate-950">{request.item_name}</span> },
-    { key: "requested_changes", header: "Requested changes", render: (request) => <RequestSummary changes={parseRequestedChanges(request.requested_changes)} /> },
-    { key: "status", header: "Status", render: (request) => <StatusBadge status={request.status} /> },
-    { key: "reason", header: "Reason", render: (request) => request.reason || "No reason provided" },
-    { key: "admin_note", header: "Admin note", render: (request) => request.admin_note || "Pending" },
+    { key: "item_name", header: "Auction", width: "w-56", truncate: true, render: (request) => <span className="font-medium text-slate-950">{request.item_name}</span> },
+    { key: "requested_changes", header: "Requested changes", width: "w-[28%]", render: (request) => <RequestSummary changes={parseRequestedChanges(request.requested_changes)} /> },
+    { key: "status", header: "Status", width: "w-32", render: (request) => <StatusBadge status={request.status} /> },
+    { key: "reason", header: "Reason", truncate: true, render: (request) => request.reason || "No reason provided" },
+    { key: "admin_note", header: "Admin note", truncate: true, render: (request) => request.admin_note || "Pending" },
   ];
+  const emptyCopy = getVendorEmptyCopy(tab, Boolean(query.trim()));
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-8">
@@ -247,9 +282,9 @@ export default function VendorDashboard() {
       {error && <div className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
       {!loading && !error && (
         tab === "requests" ? (
-          <DataTable columns={requestColumns} rows={requests} getRowKey={(request) => request.id} emptyTitle="No change requests" />
+          <DataTable columns={requestColumns} rows={visibleRequests} getRowKey={(request) => request.id} emptyTitle={emptyCopy.title} emptyDescription={emptyCopy.description} />
         ) : (
-          <DataTable columns={auctionColumns} rows={visibleAuctions} getRowKey={(auction) => auction.id} emptyTitle="No auctions in this view" />
+          <DataTable columns={auctionColumns} rows={visibleAuctions} getRowKey={(auction) => auction.id} emptyTitle={emptyCopy.title} emptyDescription={emptyCopy.description} />
         )
       )}
 
@@ -304,6 +339,41 @@ export default function VendorDashboard() {
       </Modal>
     </section>
   );
+}
+
+function getVendorEmptyCopy(tab, hasSearch) {
+  if (hasSearch) {
+    return {
+      title: "No vendor records match this search.",
+      description: "Clear the search or try another auction name.",
+    };
+  }
+
+  if (tab === "pending") {
+    return {
+      title: "No auctions waiting for review.",
+      description: "New listings you submit will appear here until an admin approves or rejects them.",
+    };
+  }
+
+  if (tab === "live") {
+    return {
+      title: "No live auctions right now.",
+      description: "Approved auctions appear here before and during bidding.",
+    };
+  }
+
+  if (tab === "closed") {
+    return {
+      title: "No closed auctions yet.",
+      description: "Sold, expired, rejected, and cancelled auctions will be grouped here.",
+    };
+  }
+
+  return {
+    title: "No change requests submitted.",
+    description: "When you request an edit after bidding starts, the request and admin decision will appear here.",
+  };
 }
 
 function valuesFromAuction(auction) {

@@ -3,6 +3,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import AppShell from "./components/AppShell";
 import ProtectedRoute from "./components/ProtectedRoute";
 import HomePage from "./pages/HomePage";
+import AuctionsPage from "./pages/AuctionsPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import VendorDashboard from "./pages/VendorDashboard";
@@ -18,6 +19,7 @@ export default function App() {
         <AppShell>
           <Routes>
             <Route path="/" element={<HomePage />} />
+            <Route path="/auctions" element={<ProtectedRoute allowedRoles={["customer", "admin"]}><AuctionsPage /></ProtectedRoute>} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/auction/:id" element={<AuctionDetails />} />

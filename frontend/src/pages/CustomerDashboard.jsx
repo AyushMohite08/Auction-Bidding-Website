@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { Eye, History, Search, Trophy } from "lucide-react";
 import { auctionApi } from "../api/auctionApi";
 import AuctionCard from "../components/AuctionCard";
@@ -9,7 +9,8 @@ import StatusBadge from "../components/StatusBadge";
 import Toast from "../components/Toast";
 import useSocket from "../hooks/useSocket";
 import { useAuth } from "../contexts/AuthContext";
-import { compactError, formatCurrency, formatDateTime, imageUrl, isActiveAuction } from "../utils/formatters";
+import { CLOSED_STATUSES, compactError, formatCurrency, formatDateTime, getAuctionDisplayStatus, imageUrl, isActiveAuction } from "../utils/formatters";
+import { auctionDetailState } from "../utils/navigation";
 
 const tabs = [
   { id: "live", label: "Live auctions" },
@@ -20,15 +21,17 @@ const tabs = [
 
 export default function CustomerDashboard() {
   const { user } = useAuth();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [auctions, setAuctions] = useState([]);
   const [bidHistory, setBidHistory] = useState([]);
   const [wins, setWins] = useState([]);
   const [stats, setStats] = useState({ total_auctions_participated: 0, total_bids_placed: 0, total_wins: 0 });
-  const [tab, setTab] = useState("live");
-  const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [toast, setToast] = useState(null);
+  const tab = tabs.some((item) => item.id === searchParams.get("tab")) ? searchParams.get("tab") : "live";
+  const query = searchParams.get("q") || "";
 
   const load = useCallback(async () => {
     try {
@@ -71,7 +74,7 @@ export default function CustomerDashboard() {
     [auctions, normalizedQuery]
   );
   const pastAuctions = useMemo(
-    () => auctions.filter((auction) => ["sold", "expired", "rejected", "cancelled"].includes(auction.status) && matchesAuction(auction, normalizedQuery)),
+    () => auctions.filter((auction) => CLOSED_STATUSES.includes(getAuctionDisplayStatus(auction)) && matchesAuction(auction, normalizedQuery)),
     [auctions, normalizedQuery]
   );
   const filteredBids = useMemo(
@@ -82,6 +85,21 @@ export default function CustomerDashboard() {
     () => wins.filter((win) => `${win.item_name} ${win.vendor_name}`.toLowerCase().includes(normalizedQuery)),
     [wins, normalizedQuery]
   );
+
+  const setTab = (nextTab) => {
+    const next = new URLSearchParams(searchParams);
+    next.set("tab", nextTab);
+    if (!query.trim()) next.delete("q");
+    setSearchParams(next, { replace: true });
+  };
+
+  const setQuery = (nextQuery) => {
+    const next = new URLSearchParams(searchParams);
+    next.set("tab", tab);
+    if (nextQuery.trim()) next.set("q", nextQuery);
+    else next.delete("q");
+    setSearchParams(next, { replace: true });
+  };
 
   const bidColumns = [
     {
@@ -101,7 +119,7 @@ export default function CustomerDashboard() {
     { key: "highest_bid", header: "Highest", render: (bid) => formatCurrency(bid.highest_bid) },
     { key: "status", header: "Status", render: (bid) => <StatusBadge status={bid.status} /> },
     { key: "bid_time", header: "Bid time", render: (bid) => formatDateTime(bid.bid_time) },
-    { key: "action", header: "", render: (bid) => <Link to={`/auction/${bid.auction_id}`} className="inline-flex items-center gap-1 text-sm font-medium text-slate-950 hover:underline"><Eye className="h-4 w-4" /> View</Link> },
+    { key: "action", header: "", width: "w-24", render: (bid) => <Link to={`/auction/${bid.auction_id}`} state={auctionDetailState(location)} className="inline-flex items-center gap-1 text-sm font-medium text-slate-950 hover:underline"><Eye className="h-4 w-4" /> View</Link> },
   ];
 
   const winColumns = [
@@ -109,7 +127,7 @@ export default function CustomerDashboard() {
     { key: "vendor_name", header: "Vendor", render: (win) => <span>{win.vendor_name}<br /><span className="text-xs text-slate-500">{win.vendor_email}</span></span> },
     { key: "price", header: "Winning price", render: (win) => formatCurrency(win.locked_price || win.current_bid || win.my_winning_bid) },
     { key: "end_time", header: "Won on", render: (win) => formatDateTime(win.end_time) },
-    { key: "action", header: "", render: (win) => <Link to={`/auction/${win.auction_id}`} className="inline-flex items-center gap-1 text-sm font-medium text-slate-950 hover:underline"><Eye className="h-4 w-4" /> View</Link> },
+    { key: "action", header: "", width: "w-24", render: (win) => <Link to={`/auction/${win.auction_id}`} state={auctionDetailState(location)} className="inline-flex items-center gap-1 text-sm font-medium text-slate-950 hover:underline"><Eye className="h-4 w-4" /> View</Link> },
   ];
 
   return (

@@ -15,7 +15,7 @@ export default function RegisterPage() {
   }, [setError]);
 
   useEffect(() => {
-    if (user) navigate(`/${user.role}`, { replace: true });
+    if (user) navigate(user.role === "customer" ? "/auctions" : `/${user.role}`, { replace: true });
   }, [user, navigate]);
 
   const update = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));

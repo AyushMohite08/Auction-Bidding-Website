@@ -6,11 +6,12 @@ export default function ProtectedRoute({ children, allowedRoles }) {
   const location = useLocation();
 
   if (!user) {
-    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+    return <Navigate to="/login" replace state={{ from: `${location.pathname}${location.search}` }} />;
   }
 
   if (allowedRoles?.length && !allowedRoles.includes(user.role)) {
-    return <Navigate to="/" replace />;
+    const fallback = user.role === "vendor" ? "/vendor" : user.role === "admin" ? "/admin" : user.role === "customer" ? "/auctions" : "/";
+    return <Navigate to={fallback} replace />;
   }
 
   return children;

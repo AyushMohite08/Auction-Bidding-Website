@@ -5,6 +5,11 @@ import { useAuth } from "../contexts/AuthContext";
 import FormField, { inputClass } from "../components/FormField";
 
 const roles = ["customer", "vendor", "admin"];
+const roleHome = {
+  customer: "/auctions",
+  vendor: "/vendor",
+  admin: "/admin",
+};
 
 export default function LoginPage() {
   const [form, setForm] = useState({ email: "", password: "", role: "customer" });
@@ -18,7 +23,7 @@ export default function LoginPage() {
   }, [setError]);
 
   useEffect(() => {
-    if (user) navigate(location.state?.from || `/${user.role}`, { replace: true });
+    if (user) navigate(location.state?.from || roleHome[user.role] || "/", { replace: true });
   }, [user, navigate, location.state]);
 
   const submit = async (event) => {

@@ -5,7 +5,36 @@ export const CLOSED_STATUSES = ["sold", "expired", "rejected", "cancelled"];
 
 export function isActiveAuction(auction) {
   if (!auction) return false;
-  return ACTIVE_STATUSES.includes(auction.status) && !auction.locked_price && new Date(auction.end_time) > new Date();
+  const now = new Date();
+  return ACTIVE_STATUSES.includes(auction.status) && !auction.locked_price && new Date(auction.start_time) <= now && new Date(auction.end_time) > now;
+}
+
+export function displayStatusForAuction(auction, options = {}) {
+  const status = getAuctionDisplayStatus(auction);
+  return {
+    status,
+    label: status === "active" && options.liveLabel ? "Live" : labelForStatus(status),
+  };
+}
+
+export function getAuctionDisplayStatus(auction) {
+  if (!auction) return "unknown";
+  if (auction.locked_price || auction.status === "sold") return "sold";
+  if (["pending", "rejected", "cancelled"].includes(auction.status)) return auction.status;
+
+  if (ACTIVE_STATUSES.includes(auction.status)) {
+    const now = new Date();
+    if (auction.end_time && new Date(auction.end_time) <= now) return "expired";
+    if (auction.start_time && new Date(auction.start_time) <= now) return "active";
+    return "approved";
+  }
+
+  return auction.status || "unknown";
+}
+
+export function labelForStatus(status) {
+  if (!status) return "Unknown";
+  return String(status).replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 export function hasAuctionStarted(auction) {

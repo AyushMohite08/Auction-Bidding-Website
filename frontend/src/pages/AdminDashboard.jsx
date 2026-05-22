@@ -1,22 +1,26 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { CheckCircle, Edit, Eye, Search, XCircle } from "lucide-react";
 import { auctionApi } from "../api/auctionApi";
 import AuctionForm from "../components/AuctionForm";
 import DataTable from "../components/DataTable";
 import FormField, { inputClass } from "../components/FormField";
 import Modal from "../components/Modal";
+import SelectMenu from "../components/SelectMenu";
 import StatusBadge from "../components/StatusBadge";
 import Toast from "../components/Toast";
 import useSocket from "../hooks/useSocket";
 import {
   compactError,
+  displayStatusForAuction,
   formatCurrency,
   formatDateTime,
+  getAuctionDisplayStatus,
   parseRequestedChanges,
   priceForAuction,
   toInputDateTime,
 } from "../utils/formatters";
+import { auctionDetailState } from "../utils/navigation";
 
 const tabs = [
   { id: "pending", label: "Pending approvals" },
@@ -24,18 +28,32 @@ const tabs = [
   { id: "requests", label: "Change requests" },
 ];
 
+const statusOptions = [
+  { value: "all", label: "All statuses" },
+  { value: "pending", label: "Pending" },
+  { value: "approved", label: "Approved" },
+  { value: "active", label: "Active" },
+  { value: "sold", label: "Sold" },
+  { value: "expired", label: "Expired" },
+  { value: "rejected", label: "Rejected" },
+  { value: "cancelled", label: "Cancelled" },
+];
+
 export default function AdminDashboard() {
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [auctions, setAuctions] = useState([]);
   const [requests, setRequests] = useState([]);
-  const [tab, setTab] = useState("pending");
-  const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [toast, setToast] = useState(null);
   const [editState, setEditState] = useState(null);
   const [decisionState, setDecisionState] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const tab = tabs.some((item) => item.id === searchParams.get("tab")) ? searchParams.get("tab") : "pending";
+  const query = searchParams.get("q") || "";
+  const statusFilter = statusOptions.some((item) => item.value === searchParams.get("status")) ? searchParams.get("status") : "all";
+  const focusAuction = searchParams.get("focusAuction");
 
   const load = useCallback(async () => {
     try {
@@ -69,9 +87,9 @@ export default function AdminDashboard() {
   );
 
   const normalizedQuery = query.trim().toLowerCase();
-  const pendingAuctions = useMemo(() => auctions.filter((auction) => auction.status === "pending" && matches(auction, normalizedQuery)), [auctions, normalizedQuery]);
+  const pendingAuctions = useMemo(() => auctions.filter((auction) => getAuctionDisplayStatus(auction) === "pending" && matches(auction, normalizedQuery)), [auctions, normalizedQuery]);
   const filteredAuctions = useMemo(
-    () => auctions.filter((auction) => matches(auction, normalizedQuery) && (statusFilter === "all" || auction.status === statusFilter)),
+    () => auctions.filter((auction) => matches(auction, normalizedQuery) && (statusFilter === "all" || getAuctionDisplayStatus(auction) === statusFilter)),
     [auctions, normalizedQuery, statusFilter]
   );
   const filteredRequests = useMemo(
@@ -80,11 +98,46 @@ export default function AdminDashboard() {
   );
 
   const stats = useMemo(() => ({
-    pending: auctions.filter((auction) => auction.status === "pending").length,
-    live: auctions.filter((auction) => ["approved", "active"].includes(auction.status)).length,
-    sold: auctions.filter((auction) => auction.status === "sold").length,
+    pending: auctions.filter((auction) => getAuctionDisplayStatus(auction) === "pending").length,
+    live: auctions.filter((auction) => ["approved", "active"].includes(getAuctionDisplayStatus(auction))).length,
+    sold: auctions.filter((auction) => getAuctionDisplayStatus(auction) === "sold").length,
     requests: requests.filter((request) => request.status === "pending").length,
   }), [auctions, requests]);
+
+  useEffect(() => {
+    if (loading || !focusAuction) return undefined;
+    const timeoutId = window.setTimeout(() => {
+      document.getElementById(`auction-row-${focusAuction}`)?.scrollIntoView({ block: "center", behavior: "smooth" });
+    }, 100);
+    return () => window.clearTimeout(timeoutId);
+  }, [loading, focusAuction, tab, pendingAuctions.length, filteredAuctions.length]);
+
+  const setTab = (nextTab) => {
+    const next = new URLSearchParams(searchParams);
+    next.set("tab", nextTab);
+    next.delete("focusAuction");
+    if (!query.trim()) next.delete("q");
+    if (nextTab !== "auctions") next.delete("status");
+    setSearchParams(next, { replace: true });
+  };
+
+  const setQuery = (nextQuery) => {
+    const next = new URLSearchParams(searchParams);
+    next.set("tab", tab);
+    next.delete("focusAuction");
+    if (nextQuery.trim()) next.set("q", nextQuery);
+    else next.delete("q");
+    setSearchParams(next, { replace: true });
+  };
+
+  const setStatusFilter = (nextStatus) => {
+    const next = new URLSearchParams(searchParams);
+    next.set("tab", "auctions");
+    next.delete("focusAuction");
+    if (nextStatus === "all") next.delete("status");
+    else next.set("status", nextStatus);
+    setSearchParams(next, { replace: true });
+  };
 
   const updateStatus = async (auction, newStatus) => {
     try {
@@ -144,12 +197,23 @@ export default function AdminDashboard() {
   };
 
   const pendingColumns = [
-    { key: "item_name", header: "Auction", render: (auction) => <div><p className="font-medium text-slate-950">{auction.item_name}</p><p className="text-xs text-slate-500">Vendor ID: {auction.vendor_id}</p></div> },
-    { key: "min_bid", header: "Minimum", render: (auction) => formatCurrency(auction.min_bid) },
-    { key: "time", header: "Schedule", render: (auction) => <span>{formatDateTime(auction.start_time)}<br /><span className="text-xs text-slate-500">Ends {formatDateTime(auction.end_time)}</span></span> },
+    {
+      key: "item_name",
+      header: "Auction",
+      width: "w-[32%]",
+      render: (auction) => (
+        <div className="min-w-0">
+          <Link to={`/auction/${auction.id}`} state={auctionDetailState(location)} className="block truncate font-medium text-slate-950 hover:underline">{auction.item_name}</Link>
+          <p className="truncate text-xs text-slate-500">Vendor ID: {auction.vendor_id}</p>
+        </div>
+      ),
+    },
+    { key: "min_bid", header: "Minimum", width: "w-32", render: (auction) => formatCurrency(auction.min_bid) },
+    { key: "time", header: "Schedule", width: "w-64", render: (auction) => <span>{formatDateTime(auction.start_time)}<br /><span className="text-xs text-slate-500">Ends {formatDateTime(auction.end_time)}</span></span> },
     {
       key: "actions",
       header: "",
+      width: "w-28",
       render: (auction) => (
         <div className="flex justify-end gap-2">
           <button type="button" onClick={() => updateStatus(auction, "approved")} className="rounded-md border border-emerald-200 p-2 text-emerald-700 hover:bg-emerald-50" title="Approve"><CheckCircle className="h-4 w-4" /></button>
@@ -160,30 +224,35 @@ export default function AdminDashboard() {
   ];
 
   const auctionColumns = [
-    { key: "item_name", header: "Auction", render: (auction) => <span className="font-medium text-slate-950">{auction.item_name}</span> },
-    { key: "status", header: "Status", render: (auction) => <StatusBadge status={auction.status} /> },
-    { key: "price", header: "Price", render: (auction) => formatCurrency(priceForAuction(auction)) },
-    { key: "end_time", header: "End time", render: (auction) => formatDateTime(auction.end_time) },
+    { key: "item_name", header: "Auction", width: "w-[32%]", render: (auction) => <Link to={`/auction/${auction.id}`} state={auctionDetailState(location)} className="block truncate font-medium text-slate-950 hover:underline">{auction.item_name}</Link> },
+    { key: "status", header: "Status", width: "w-32", render: (auction) => {
+      const badge = displayStatusForAuction(auction);
+      return <StatusBadge status={badge.status}>{badge.label}</StatusBadge>;
+    } },
+    { key: "price", header: "Price", width: "w-36", render: (auction) => formatCurrency(priceForAuction(auction)) },
+    { key: "end_time", header: "End time", width: "w-56", render: (auction) => formatDateTime(auction.end_time) },
     {
       key: "actions",
       header: "",
+      width: "w-28",
       render: (auction) => (
         <div className="flex justify-end gap-2">
-          <Link to={`/auction/${auction.id}`} className="rounded-md border border-slate-300 p-2 text-slate-600 hover:bg-slate-100" title="View"><Eye className="h-4 w-4" /></Link>
-          {!["sold", "expired", "cancelled"].includes(auction.status) && <button type="button" onClick={() => openEdit(auction)} className="rounded-md border border-slate-300 p-2 text-slate-600 hover:bg-slate-100" title="Edit"><Edit className="h-4 w-4" /></button>}
+          <Link to={`/auction/${auction.id}`} state={auctionDetailState(location)} className="rounded-md border border-slate-300 p-2 text-slate-600 hover:bg-slate-100" title="View"><Eye className="h-4 w-4" /></Link>
+          {!["sold", "expired", "cancelled"].includes(getAuctionDisplayStatus(auction)) && <button type="button" onClick={() => openEdit(auction)} className="rounded-md border border-slate-300 p-2 text-slate-600 hover:bg-slate-100" title="Edit"><Edit className="h-4 w-4" /></button>}
         </div>
       ),
     },
   ];
 
   const requestColumns = [
-    { key: "item_name", header: "Auction", render: (request) => <div><p className="font-medium text-slate-950">{request.item_name}</p><p className="text-xs text-slate-500">Vendor: {request.vendor_name}</p></div> },
-    { key: "requested_changes", header: "Requested changes", render: (request) => <RequestSummary changes={parseRequestedChanges(request.requested_changes)} /> },
-    { key: "status", header: "Status", render: (request) => <StatusBadge status={request.status} /> },
-    { key: "reason", header: "Reason", render: (request) => request.reason || "No reason provided" },
+    { key: "item_name", header: "Auction", width: "w-56", render: (request) => <div className="min-w-0"><p className="truncate font-medium text-slate-950">{request.item_name}</p><p className="truncate text-xs text-slate-500">Vendor: {request.vendor_name}</p></div> },
+    { key: "requested_changes", header: "Requested changes", width: "w-[28%]", render: (request) => <RequestSummary changes={parseRequestedChanges(request.requested_changes)} /> },
+    { key: "status", header: "Status", width: "w-32", render: (request) => <StatusBadge status={request.status} /> },
+    { key: "reason", header: "Reason", truncate: true, render: (request) => request.reason || "No reason provided" },
     {
       key: "actions",
       header: "",
+      width: "w-28",
       render: (request) => request.status === "pending" ? (
         <div className="flex justify-end gap-2">
           <button type="button" onClick={() => setDecisionState({ request, status: "approved", adminNote: "Approved" })} className="rounded-md border border-emerald-200 p-2 text-emerald-700 hover:bg-emerald-50" title="Approve"><CheckCircle className="h-4 w-4" /></button>
@@ -214,9 +283,9 @@ export default function AdminDashboard() {
       {error && <div className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
       {!loading && !error && (
         <>
-          {tab === "pending" && <DataTable columns={pendingColumns} rows={pendingAuctions} getRowKey={(auction) => auction.id} emptyTitle="No pending auctions" />}
-          {tab === "auctions" && <DataTable columns={auctionColumns} rows={filteredAuctions} getRowKey={(auction) => auction.id} emptyTitle="No auctions found" />}
-          {tab === "requests" && <DataTable columns={requestColumns} rows={filteredRequests} getRowKey={(request) => request.id} emptyTitle="No change requests found" />}
+          {tab === "pending" && <DataTable columns={pendingColumns} rows={pendingAuctions} getRowKey={(auction) => auction.id} getRowId={(auction) => `auction-row-${auction.id}`} rowClassName={(auction) => String(auction.id) === focusAuction ? "bg-amber-50 ring-1 ring-inset ring-amber-200" : ""} emptyTitle="No auctions waiting for approval." emptyDescription="Pending vendor listings will appear here for review." />}
+          {tab === "auctions" && <DataTable columns={auctionColumns} rows={filteredAuctions} getRowKey={(auction) => auction.id} getRowId={(auction) => `auction-row-${auction.id}`} rowClassName={(auction) => String(auction.id) === focusAuction ? "bg-amber-50 ring-1 ring-inset ring-amber-200" : ""} emptyTitle="No auctions match these filters." emptyDescription="Clear the search or change the status filter to see more auctions." />}
+          {tab === "requests" && <DataTable columns={requestColumns} rows={filteredRequests} getRowKey={(request) => request.id} emptyTitle="No change requests to review." emptyDescription="Vendor requests will appear here when they need an admin decision." />}
         </>
       )}
 
@@ -273,7 +342,7 @@ function valuesFromAuction(auction, hasBids) {
 }
 
 function matches(auction, query) {
-  return !query || `${auction.item_name} ${auction.description} ${auction.status}`.toLowerCase().includes(query);
+  return !query || `${auction.item_name} ${auction.description} ${getAuctionDisplayStatus(auction)}`.toLowerCase().includes(query);
 }
 
 function RequestSummary({ changes }) {
@@ -287,11 +356,16 @@ function RequestSummary({ changes }) {
 
 function Toolbar({ query, setQuery, tab, setTab, statusFilter, setStatusFilter }) {
   return (
-    <div className="mb-6 space-y-3 rounded-md border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="mb-6 rounded-md border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="relative lg:w-96">
-          <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search auctions or requests" className="w-full rounded-md border border-slate-300 py-2 pl-9 pr-3 text-sm outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200" />
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+          <div className="relative lg:w-96">
+            <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search auctions or requests" className="h-10 w-full rounded-md border border-slate-300 py-2 pl-9 pr-3 text-sm outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200" />
+          </div>
+          {tab === "auctions" && (
+            <SelectMenu id="admin-status-filter" value={statusFilter} onChange={setStatusFilter} options={statusOptions} className="lg:w-44" />
+          )}
         </div>
         <div className="flex flex-wrap gap-2">
           {tabs.map((item) => (
@@ -301,14 +375,6 @@ function Toolbar({ query, setQuery, tab, setTab, statusFilter, setStatusFilter }
           ))}
         </div>
       </div>
-      {tab === "auctions" && (
-        <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200">
-          <option value="all">All statuses</option>
-          {["pending", "approved", "active", "sold", "expired", "rejected", "cancelled"].map((status) => (
-            <option key={status} value={status}>{status}</option>
-          ))}
-        </select>
-      )}
     </div>
   );
 }

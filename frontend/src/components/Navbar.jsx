@@ -25,9 +25,7 @@ export default function Navbar() {
         </Link>
 
         <nav className="flex flex-wrap items-center gap-1">
-          <NavLink to="/" className={navLinkClass} end>
-            Auctions
-          </NavLink>
+          {(user?.role === "customer" || user?.role === "admin") && <NavLink to="/auctions" className={navLinkClass}>Auctions</NavLink>}
           {user?.role === "customer" && <NavLink to="/customer" className={navLinkClass}>Customer</NavLink>}
           {user?.role === "vendor" && <NavLink to="/vendor" className={navLinkClass}>Vendor</NavLink>}
           {user?.role === "admin" && <NavLink to="/admin" className={navLinkClass}>Admin</NavLink>}
