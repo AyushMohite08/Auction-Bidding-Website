@@ -68,11 +68,11 @@ export default function AuctionForm({
         </label>
         {values.popcornEnabled && (
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <FormField label="Extension minutes" id={`${mode}-popcornExtensionMinutes`}>
-              <input id={`${mode}-popcornExtensionMinutes`} type="number" min="1" className={inputClass} value={values.popcornExtensionMinutes || 5} onChange={(e) => setValue("popcornExtensionMinutes", e.target.value)} />
+            <FormField label="Extension minutes" id={`${mode}-popcornExtensionMinutes`} hint="Max 5 minutes.">
+              <input id={`${mode}-popcornExtensionMinutes`} type="number" min="1" max="5" className={inputClass} value={values.popcornExtensionMinutes || 5} onChange={(e) => setValue("popcornExtensionMinutes", e.target.value)} />
             </FormField>
-            <FormField label="Trigger seconds" id={`${mode}-popcornTriggerSeconds`}>
-              <input id={`${mode}-popcornTriggerSeconds`} type="number" min="1" className={inputClass} value={values.popcornTriggerSeconds || 60} onChange={(e) => setValue("popcornTriggerSeconds", e.target.value)} />
+            <FormField label="Trigger seconds" id={`${mode}-popcornTriggerSeconds`} hint="Max 300 seconds.">
+              <input id={`${mode}-popcornTriggerSeconds`} type="number" min="1" max="300" className={inputClass} value={values.popcornTriggerSeconds || 60} onChange={(e) => setValue("popcornTriggerSeconds", e.target.value)} />
             </FormField>
           </div>
         )}

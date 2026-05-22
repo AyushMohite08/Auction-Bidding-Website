@@ -13,7 +13,7 @@ The backend currently supports secure HttpOnly cookie authentication, role-based
 - Admin auction approval/rejection and controlled auction edits.
 - Customer bidding, bid history, wins, and stats.
 - Vendor change requests for post-bid auction updates.
-- One-time popcorn bidding extension for last-minute bids.
+- One-time popcorn bidding extension for last-minute bids, capped at 5 extension minutes and a 300-second trigger window.
 - Automatic auction expiry scheduler.
 - Socket.IO notification events.
 - Local image uploads for auction items.
@@ -180,6 +180,7 @@ AUTH_COOKIE_SAME_SITE=lax
 
 FRONTEND_ORIGINS=http://localhost:3000,http://localhost:5173
 UPLOAD_DIR=uploads
+SOCKET_DEBUG=false
 ```
 
 For cross-domain HTTPS deployments, use:
@@ -189,6 +190,8 @@ AUTH_COOKIE_SECURE=true
 AUTH_COOKIE_SAME_SITE=none
 FRONTEND_ORIGINS=https://your-frontend-domain.com
 ```
+
+Keep `SOCKET_DEBUG=false` unless you are diagnosing realtime connections. In multi-instance deployments, run the auction expiry scheduler in only one backend process or move it to a dedicated worker.
 
 Do not store JWTs in localStorage. The frontend should use cookies with:
 

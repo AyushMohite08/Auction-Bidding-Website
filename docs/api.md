@@ -319,6 +319,8 @@ Notes:
 - New vendor auctions default to `pending`.
 - `startTime` and `endTime` can be ISO strings.
 - Popcorn settings are optional. Defaults are disabled, 5 extension minutes, 60 trigger seconds.
+- `popcornExtensionMinutes` must be between `1` and `5`.
+- `popcornTriggerSeconds` is measured in seconds and must be between `1` and `300`.
 
 ### List My Auctions
 
@@ -441,6 +443,7 @@ Bid rules:
 - auction must not be expired or locked
 - bid must be higher than current bid or minimum bid
 - if popcorn is enabled and the bid lands inside the final trigger window, end time extends once
+- popcorn extension is capped at 5 minutes and trigger window is capped at 300 seconds
 
 ### Get My Bid History
 

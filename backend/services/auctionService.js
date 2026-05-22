@@ -8,6 +8,11 @@ export function parsePositiveNumber(value) {
   return Number.isFinite(number) && number > 0 ? number : null;
 }
 
+export const POPCORN_EXTENSION_MINUTES_MIN = 1;
+export const POPCORN_EXTENSION_MINUTES_MAX = 5;
+export const POPCORN_TRIGGER_SECONDS_MIN = 10;
+export const POPCORN_TRIGGER_SECONDS_MAX = 300;
+
 function parseBoolean(value) {
   return value === true || value === "true" || value === "1" || value === 1;
 }
@@ -40,9 +45,11 @@ export function getPopcornSettings(body) {
     body.popcornExtensionMinutes !== undefined ? parsePositiveInteger(body.popcornExtensionMinutes) : 5;
   const triggerSeconds = body.popcornTriggerSeconds !== undefined ? parsePositiveInteger(body.popcornTriggerSeconds) : 60;
 
-  if (!extensionMinutes || !triggerSeconds) {
-    return { error: "Popcorn extension minutes and trigger seconds must be positive numbers." };
-  }
+  const limitError = validatePopcornLimits({
+    popcorn_extension_minutes: extensionMinutes,
+    popcorn_trigger_seconds: triggerSeconds,
+  });
+  if (limitError) return { error: limitError };
 
   return {
     popcorn_enabled: parseBoolean(body.popcornEnabled) ? 1 : 0,
@@ -159,8 +166,33 @@ export function validateAuctionUpdates(updates) {
   if (updates.min_bid === null) {
     return "Minimum bid must be a positive number.";
   }
-  if (updates.popcorn_extension_minutes === null || updates.popcorn_trigger_seconds === null) {
-    return "Popcorn extension minutes and trigger seconds must be positive numbers.";
+  const popcornLimitError = validatePopcornLimits(updates);
+  if (popcornLimitError) return popcornLimitError;
+
+  return null;
+}
+
+function validatePopcornLimits(values) {
+  if (values.popcorn_extension_minutes !== undefined) {
+    const minutes = values.popcorn_extension_minutes;
+    if (
+      minutes === null ||
+      minutes < POPCORN_EXTENSION_MINUTES_MIN ||
+      minutes > POPCORN_EXTENSION_MINUTES_MAX
+    ) {
+      return `Popcorn extension minutes must be between ${POPCORN_EXTENSION_MINUTES_MIN} and ${POPCORN_EXTENSION_MINUTES_MAX}.`;
+    }
+  }
+
+  if (values.popcorn_trigger_seconds !== undefined) {
+    const seconds = values.popcorn_trigger_seconds;
+    if (
+      seconds === null ||
+      seconds < POPCORN_TRIGGER_SECONDS_MIN ||
+      seconds > POPCORN_TRIGGER_SECONDS_MAX
+    ) {
+      return `Popcorn trigger seconds must be between ${POPCORN_TRIGGER_SECONDS_MIN} and ${POPCORN_TRIGGER_SECONDS_MAX}.`;
+    }
   }
 
   return null;

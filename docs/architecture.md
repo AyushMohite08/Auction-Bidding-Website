@@ -123,12 +123,12 @@ Change requests:
 Popcorn bidding is optional per auction.
 
 - `popcorn_enabled`: enables anti-sniping behavior.
-- `popcorn_trigger_seconds`: final window that can trigger extension, default `60`.
-- `popcorn_extension_minutes`: extension amount, default `5`.
+- `popcorn_trigger_seconds`: final window that can trigger extension, default `60`, allowed range `1`-`300`.
+- `popcorn_extension_minutes`: extension amount, default `5`, allowed range `1`-`5`.
 - `popcorn_extended`: prevents repeated extensions.
 - `popcorn_notice`: persisted note for bidders/viewers.
 
-When a valid bid lands inside the trigger window and the auction has not already been extended, the backend extends `end_time` once, saves the notice, and emits a Socket.IO notification.
+When a valid bid lands inside the trigger window and the auction has not already been extended, the backend extends `end_time` once, saves the notice, and emits a Socket.IO notification. The extension is capped at 5 minutes and the trigger window is capped at 300 seconds.
 
 ## Deployment Notes
 
@@ -137,4 +137,6 @@ When a valid bid lands inside the trigger window and the auction has not already
 - Local development can use same-site lax cookies.
 - The current storage is local disk under `backend/uploads`.
 - The current database is MySQL through `mysql2/promise`.
+- Realtime UI refreshes use Socket.IO `new_notification` events with minimal auction/request identifiers.
+- Run the auction expiry scheduler in only one backend instance, or move it to a dedicated worker for scaled deployments.
 - Future production scaling can move uploads to S3/object storage and Socket.IO fanout to a shared adapter, but that is not part of the current implementation.
