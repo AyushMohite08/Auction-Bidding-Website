@@ -75,6 +75,11 @@ export async function createVendorAuction(req, res) {
       end_time: auctionService.formatDateForDb(endTime),
       ...popcornSettings,
     });
+    sendNotificationEvent(req, {
+      type: "auction_created",
+      auctionId: auction.id,
+      message: "A vendor submitted a new auction for review.",
+    });
 
     return res.status(201).json({ message: "Auction created successfully.", auction });
   } catch (error) {
@@ -103,13 +108,11 @@ export async function placeBid(req, res) {
 
   try {
     const bidResult = await rdsModel.createBid(auctionId, req.user.id, bidAmount);
-    if (bidResult.previousUserId && bidResult.previousUserId !== req.user.id) {
-      sendNotificationEvent(req, {
-        auctionId,
-        outbidUserId: bidResult.previousUserId,
-        message: `You have been outbid on auction ${auctionId}!`,
-      });
-    }
+    sendNotificationEvent(req, {
+      type: "bid_placed",
+      auctionId,
+      message: "A new bid was placed.",
+    });
     if (bidResult.popcornExtended) {
       sendNotificationEvent(req, {
         auctionId,
@@ -142,6 +145,11 @@ export async function deleteVendorAuction(req, res) {
       auctionId,
       actorId: req.user.id,
       action: "vendor_cancelled",
+    });
+    sendNotificationEvent(req, {
+      type: "auction_cancelled",
+      auctionId,
+      message: "A vendor cancelled an auction.",
     });
 
     return res.status(200).json({ message: "Auction cancelled successfully." });
@@ -197,6 +205,11 @@ export async function updateVendorAuction(req, res) {
       action: "vendor_update",
       details: updates,
     });
+    sendNotificationEvent(req, {
+      type: "auction_updated",
+      auctionId,
+      message: "A vendor updated an auction.",
+    });
 
     return res.status(200).json({ message: "Auction updated successfully.", auction: updatedAuction });
   } catch (error) {
@@ -228,6 +241,11 @@ export async function lockVendorAuction(req, res) {
 
   try {
     const result = await rdsModel.lockAuction(auctionId, req.user.id);
+    sendNotificationEvent(req, {
+      type: "auction_locked",
+      auctionId,
+      message: "An auction was locked by the vendor.",
+    });
     return res.status(200).json({ message: "Auction locked successfully!", ...result });
   } catch (error) {
     return res.status(400).json({ message: error.message });
@@ -260,6 +278,11 @@ export async function updateAuctionStatus(req, res) {
       actorId: req.user.id,
       action: "admin_status_update",
       details: { status: newStatus },
+    });
+    sendNotificationEvent(req, {
+      type: newStatus === AUCTION_STATUSES.APPROVED ? "auction_approved" : "auction_rejected",
+      auctionId,
+      message: `An auction was ${newStatus}.`,
     });
     return res.status(200).json({ message: `Auction status updated to ${newStatus}.` });
   } catch (error) {
@@ -315,6 +338,11 @@ export async function updateAdminAuction(req, res) {
       details: updates,
       reason: reason || null,
     });
+    sendNotificationEvent(req, {
+      type: "auction_updated",
+      auctionId,
+      message: "An admin updated an auction.",
+    });
 
     return res.status(200).json({ message: "Auction updated successfully.", auction: updatedAuction });
   } catch (error) {
@@ -367,6 +395,12 @@ export async function createAuctionChangeRequest(req, res) {
       action: "vendor_change_request_created",
       details: requestedChanges,
       reason: req.body.reason || null,
+    });
+    sendNotificationEvent(req, {
+      type: "change_request_created",
+      auctionId,
+      requestId: request.id,
+      message: "A vendor submitted an auction change request.",
     });
 
     return res.status(201).json({ message: "Change request submitted successfully.", request });
@@ -455,6 +489,12 @@ export async function updateChangeRequestStatus(req, res) {
       status,
       adminId: req.user.id,
       adminNote,
+    });
+    sendNotificationEvent(req, {
+      type: status === "approved" ? "change_request_approved" : "change_request_rejected",
+      auctionId: request.auction_id,
+      requestId,
+      message: `A change request was ${status}.`,
     });
 
     return res.status(200).json({ message: `Change request ${status}.`, request: updatedRequest });

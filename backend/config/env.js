@@ -70,4 +70,5 @@ export const env = {
   uploads: {
     dir: process.env.UPLOAD_DIR || "uploads",
   },
+  socketDebug: parseBoolean(process.env.SOCKET_DEBUG, false),
 };

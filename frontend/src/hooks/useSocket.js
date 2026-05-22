@@ -1,27 +1,56 @@
-// src/hooks/useSocket.js
-import { useEffect, useRef } from "react";
+import { createContext, createElement, useContext, useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
 import { API_SERVER_URL } from "../api/apiClient";
+import { useAuth } from "../contexts/AuthContext";
 
-export default function useSocket(eventName, callback) {
-  const socketRef = useRef(null);
+const SocketContext = createContext(null);
+
+export function SocketProvider({ children }) {
+  const [socket, setSocket] = useState(null);
+  const { user } = useAuth();
+  const userId = user?.id;
+  const userRole = user?.role;
 
   useEffect(() => {
-    socketRef.current = io(API_SERVER_URL, { withCredentials: true });
-
-    // Register event listener
-    if (eventName && callback) {
-      socketRef.current.on(eventName, callback);
+    if (!userId) {
+      setSocket(null);
+      return undefined;
     }
 
-    // Cleanup
-    return () => {
-      if (socketRef.current) {
-        socketRef.current.off(eventName, callback);
-        socketRef.current.disconnect();
-      }
-    };
-  }, [eventName, callback]);
+    const nextSocket = io(API_SERVER_URL, {
+      withCredentials: true,
+      transports: ["websocket", "polling"],
+    });
+    setSocket(nextSocket);
 
-  return socketRef;
+    return () => {
+      nextSocket.disconnect();
+    };
+  }, [userId, userRole]);
+
+  return createElement(SocketContext.Provider, { value: socket }, children);
+}
+
+export default function useSocket(eventName, callback) {
+  const socket = useContext(SocketContext);
+  const callbackRef = useRef(callback);
+
+  useEffect(() => {
+    callbackRef.current = callback;
+  }, [callback]);
+
+  useEffect(() => {
+    if (!socket || !eventName) return undefined;
+
+    const handler = (payload) => {
+      callbackRef.current?.(payload);
+    };
+
+    socket.on(eventName, handler);
+    return () => {
+      socket.off(eventName, handler);
+    };
+  }, [socket, eventName]);
+
+  return socket;
 }

@@ -492,6 +492,7 @@ export async function expireAuctions() {
       `,
       ACTIVE_AUCTION_STATUSES
     );
+    const changes = [];
 
     for (const auction of expiredAuctions) {
       const [bids] = await connection.execute(
@@ -511,15 +512,17 @@ export async function expireAuctions() {
           "UPDATE auctions SET status = ?, winner_user_id = ?, locked_price = ? WHERE id = ?",
           [AUCTION_STATUSES.SOLD, winner.user_id, winner.bid_amount, auction.id]
         );
+        changes.push({ auctionId: auction.id, status: AUCTION_STATUSES.SOLD });
       } else {
         await connection.execute("UPDATE auctions SET status = ? WHERE id = ?", [
           AUCTION_STATUSES.EXPIRED,
           auction.id,
         ]);
+        changes.push({ auctionId: auction.id, status: AUCTION_STATUSES.EXPIRED });
       }
     }
 
-    return { processed: expiredAuctions.length };
+    return { processed: expiredAuctions.length, changes };
   });
 }
 
