@@ -10,6 +10,7 @@ This document describes the current backend architecture. It is intentionally si
 - Auction images are optimized to WebP and uploaded to ImageKit.
 - The expiry scheduler starts with the server and checks ended auctions every minute.
 - Socket.IO currently broadcasts notification events through `new_notification`.
+- `API_PAUSED=true` returns `503` from API routes and skips new socket/scheduler DB work.
 
 ## Folder Structure
 
@@ -33,6 +34,7 @@ Current key files:
 - `controllers/authController.js`: auth/profile/account endpoints.
 - `controllers/auctionController.js`: auction, bidding, change-request, vendor, customer, and admin endpoint flow.
 - `middleware/rateLimitMiddleware.js`: lightweight API/auth/bid/create limits and vendor monthly quota checks.
+- `middleware/serviceAvailabilityMiddleware.js`: manual API pause switch for temporary `503` protection.
 - `services/authService.js`: email/password validation, bcrypt, token issuing, safe user output.
 - `services/auctionService.js`: auction parsing, date formatting, edit-field helpers, and validation helpers.
 - `services/imageService.js`: auction image optimization and ImageKit upload.

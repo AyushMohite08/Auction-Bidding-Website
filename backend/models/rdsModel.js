@@ -15,6 +15,10 @@ export const pool = mysql.createPool({
 
 console.log(`RDS pool initialized for host: ${env.db.host || "not configured"}`);
 
+export async function checkDatabaseConnection() {
+  await pool.query("SELECT 1");
+}
+
 export async function withTransaction(work) {
   const connection = await pool.getConnection();
 

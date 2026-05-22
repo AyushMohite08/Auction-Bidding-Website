@@ -94,5 +94,7 @@ export const env = {
     auctionCreateMax: parsePositiveInteger(Number(process.env.RATE_LIMIT_AUCTION_CREATE_MAX), 10),
   },
   vendorMonthlyAuctionLimit: parsePositiveInteger(Number(process.env.VENDOR_MONTHLY_AUCTION_LIMIT), 20),
+  apiPaused: parseBoolean(process.env.API_PAUSED, false),
+  apiPausedMessage: process.env.API_PAUSED_MESSAGE || "Service temporarily unavailable. Please try again later.",
   socketDebug: parseBoolean(process.env.SOCKET_DEBUG, false),
 };

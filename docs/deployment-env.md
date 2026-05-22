@@ -24,6 +24,8 @@ Backend `.env`:
 AUTH_COOKIE_SECURE=false
 AUTH_COOKIE_SAME_SITE=lax
 FRONTEND_ORIGINS=http://localhost:5173,http://localhost:3000
+API_PAUSED=false
+API_PAUSED_MESSAGE=Service temporarily unavailable. Please try again later.
 MAX_AUCTION_IMAGE_SIZE_MB=5
 IMAGEKIT_PRIVATE_KEY=private_your_imagekit_private_key
 IMAGEKIT_PUBLIC_KEY=public_your_imagekit_public_key
@@ -117,5 +119,7 @@ VITE_API_URL=https://your-backend-domain.com/api
 - Do not use backend local filesystem storage for user-uploaded auction images.
 - Rate limits use in-memory counters in this version, which is enough for one backend instance.
 - `VENDOR_MONTHLY_AUCTION_LIMIT` blocks new vendor auction creation after the monthly limit is reached.
+- Use `API_PAUSED=true` as a manual safety switch when a free-tier database or hosting limit is close. It returns `503` for API routes and prevents new socket/scheduler DB work.
+- Database connection failures are returned as `503` instead of generic `500` responses where backend controllers can detect them.
 - Keep JWT secrets long, random, and different in production.
 - Keep `SOCKET_DEBUG=false` unless diagnosing realtime connection behavior.

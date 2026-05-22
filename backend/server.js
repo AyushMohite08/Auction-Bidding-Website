@@ -7,6 +7,7 @@ import auctionRoutes from "./routes/auctionRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import { requireAllowedOrigin } from "./middleware/securityMiddleware.js";
 import { generalApiLimiter } from "./middleware/rateLimitMiddleware.js";
+import { requireApiAvailable } from "./middleware/serviceAvailabilityMiddleware.js";
 import { errorHandler, notFoundHandler } from "./utils/http.js";
 import { readCookie } from "./utils/cookies.js";
 import { verifyAccessToken } from "./utils/jwt.js";
@@ -36,6 +37,10 @@ const io = new Server(server, {
 });
 
 io.use(async (socket, next) => {
+  if (env.apiPaused) {
+    return next(new Error(env.apiPausedMessage));
+  }
+
   const token = readCookie(socket.request, env.auth.accessCookieName);
   if (!token) {
     return next(new Error("Authentication is required."));
@@ -69,6 +74,7 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use("/api", requireApiAvailable);
 app.use("/api", generalApiLimiter);
 app.use("/api", auctionRoutes);
 app.use("/api/auth", authRoutes);
@@ -96,7 +102,17 @@ io.on("connection", (socket) => {
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-server.listen(env.port, "0.0.0.0", () => {
+server.listen(env.port, "0.0.0.0", async () => {
   console.log(`Server running on port ${env.port}`);
-  startScheduler(io);
+  try {
+    await rdsModel.checkDatabaseConnection();
+    console.log("Database connection verified.");
+  } catch (error) {
+    console.error("Database unavailable on startup:", error.message);
+  }
+  if (env.apiPaused) {
+    console.log("API is paused; auction expiry scheduler was not started.");
+  } else {
+    startScheduler(io);
+  }
 });

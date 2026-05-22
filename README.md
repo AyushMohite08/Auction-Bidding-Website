@@ -180,6 +180,8 @@ AUTH_COOKIE_SECURE=false
 AUTH_COOKIE_SAME_SITE=lax
 
 FRONTEND_ORIGINS=http://localhost:3000,http://localhost:5173
+API_PAUSED=false
+API_PAUSED_MESSAGE=Service temporarily unavailable. Please try again later.
 MAX_AUCTION_IMAGE_SIZE_MB=5
 IMAGEKIT_PRIVATE_KEY=private_your_imagekit_private_key
 IMAGEKIT_PUBLIC_KEY=public_your_imagekit_public_key
@@ -237,6 +239,7 @@ npm run dev
 - Auction images upload to ImageKit; do not rely on backend local filesystem storage for user uploads.
 - Default rate limits are in-memory and best suited to single-instance deployments. Use a shared store before scaling to multiple backend instances.
 - `VENDOR_MONTHLY_AUCTION_LIMIT` counts every auction a vendor creates in the current database calendar month, including rejected or cancelled auctions.
+- Set `API_PAUSED=true` to return `503` from backend API routes and stop new Socket.IO/scheduler DB work during a temporary free-tier/resource pause.
 - `.env` files are ignored by git. Commit only `.env.example`.
 - `node_modules/`, build output, logs, and generated archives should not be committed.
 

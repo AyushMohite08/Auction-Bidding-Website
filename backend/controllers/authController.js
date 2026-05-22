@@ -3,6 +3,7 @@ import { PUBLIC_REGISTRATION_ROLES, USER_ROLES } from "../constants/appConstants
 import * as rdsModel from "../models/rdsModel.js";
 import * as authService from "../services/authService.js";
 import { clearAuthCookies, readCookie, setAuthCookies } from "../utils/cookies.js";
+import { sendControllerError } from "../utils/http.js";
 import { verifyRefreshToken } from "../utils/jwt.js";
 
 export async function register(req, res) {
@@ -59,7 +60,7 @@ export async function register(req, res) {
     return res.status(201).json({ success: true, user: safeUser });
   } catch (error) {
     console.error("Registration error:", error);
-    return res.status(500).json({ success: false, message: "Error during registration." });
+    return sendControllerError(res, error, "Error during registration.");
   }
 }
 
@@ -98,7 +99,7 @@ export async function login(req, res) {
     return res.status(200).json({ success: true, user: safeUser });
   } catch (error) {
     console.error("Login error:", error);
-    return res.status(500).json({ success: false, message: "Error during login." });
+    return sendControllerError(res, error, "Error during login.");
   }
 }
 
@@ -128,6 +129,9 @@ export async function refresh(req, res) {
     setAuthCookies(res, authService.issueTokens(sessionUser));
     return res.status(200).json({ success: true, user: safeUser });
   } catch (error) {
+    if (error?.code) {
+      return sendControllerError(res, error, "Invalid or expired session.", 401);
+    }
     return res.status(401).json({ success: false, message: "Invalid or expired session." });
   }
 }
@@ -152,7 +156,7 @@ export async function getMe(req, res) {
     });
   } catch (error) {
     console.error("Fetch profile error:", error);
-    return res.status(500).json({ success: false, message: "Failed to fetch profile." });
+    return sendControllerError(res, error, "Failed to fetch profile.");
   }
 }
 
@@ -175,7 +179,7 @@ export async function updateMe(req, res) {
     });
   } catch (error) {
     console.error("Update profile error:", error);
-    return res.status(500).json({ success: false, message: "Failed to update profile." });
+    return sendControllerError(res, error, "Failed to update profile.");
   }
 }
 
@@ -207,7 +211,7 @@ export async function changePassword(req, res) {
     return res.status(200).json({ success: true, message: "Password updated successfully." });
   } catch (error) {
     console.error("Change password error:", error);
-    return res.status(500).json({ success: false, message: "Failed to update password." });
+    return sendControllerError(res, error, "Failed to update password.");
   }
 }
 
@@ -234,6 +238,6 @@ export async function deleteMe(req, res) {
     return res.status(200).json({ success: true, message: "Account deleted successfully." });
   } catch (error) {
     console.error("Delete account error:", error);
-    return res.status(500).json({ success: false, message: "Failed to delete account." });
+    return sendControllerError(res, error, "Failed to delete account.");
   }
 }

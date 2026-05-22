@@ -3,6 +3,7 @@ import * as rdsModel from "../models/rdsModel.js";
 import * as auctionService from "../services/auctionService.js";
 import * as imageService from "../services/imageService.js";
 import { sendNotificationEvent } from "../services/notificationService.js";
+import { sendControllerError } from "../utils/http.js";
 
 export async function listAuctions(req, res) {
   try {
@@ -10,7 +11,7 @@ export async function listAuctions(req, res) {
     return res.status(200).json(auctions);
   } catch (error) {
     console.error("Fetch auctions error:", error);
-    return res.status(500).json({ message: "Failed to fetch auctions." });
+    return sendControllerError(res, error, "Failed to fetch auctions.");
   }
 }
 
@@ -20,7 +21,7 @@ export async function listActiveAuctions(req, res) {
     return res.status(200).json(auctions);
   } catch (error) {
     console.error("Fetch active auctions error:", error);
-    return res.status(500).json({ message: "Failed to fetch active auctions." });
+    return sendControllerError(res, error, "Failed to fetch active auctions.");
   }
 }
 
@@ -39,7 +40,7 @@ export async function getAuction(req, res) {
     return res.status(200).json(auction);
   } catch (error) {
     console.error("Fetch auction error:", error);
-    return res.status(500).json({ message: "Failed to fetch auction details." });
+    return sendControllerError(res, error, "Failed to fetch auction details.");
   }
 }
 
@@ -89,7 +90,7 @@ export async function createVendorAuction(req, res) {
       return res.status(error.status).json({ message: error.message });
     }
     console.error("Auction submission error:", error);
-    return res.status(500).json({ message: "Failed to create auction." });
+    return sendControllerError(res, error, "Failed to create auction.");
   }
 }
 
@@ -99,7 +100,7 @@ export async function listVendorAuctions(req, res) {
     return res.status(200).json(auctions);
   } catch (error) {
     console.error("Fetch vendor auctions error:", error);
-    return res.status(500).json({ message: "Failed to fetch vendor auctions." });
+    return sendControllerError(res, error, "Failed to fetch vendor auctions.");
   }
 }
 
@@ -130,7 +131,7 @@ export async function placeBid(req, res) {
     return res.status(200).json(bidResult);
   } catch (error) {
     console.error("Bid placement error:", error.message);
-    return res.status(400).json({ message: error.message });
+    return sendControllerError(res, error, error.message, 400);
   }
 }
 
@@ -160,7 +161,7 @@ export async function deleteVendorAuction(req, res) {
     return res.status(200).json({ message: "Auction cancelled successfully." });
   } catch (error) {
     console.error("Delete auction error:", error.message);
-    return res.status(400).json({ message: error.message || "Failed to delete auction." });
+    return sendControllerError(res, error, error.message || "Failed to delete auction.", 400);
   }
 }
 
@@ -227,7 +228,7 @@ export async function updateVendorAuction(req, res) {
       return res.status(error.status).json({ message: error.message });
     }
     console.error("Vendor auction update error:", error);
-    return res.status(500).json({ message: "Failed to update auction." });
+    return sendControllerError(res, error, "Failed to update auction.");
   }
 }
 
@@ -242,7 +243,7 @@ export async function listAuctionBids(req, res) {
     return res.status(200).json(bids);
   } catch (error) {
     console.error("Fetch bids error:", error);
-    return res.status(500).json({ message: "Failed to fetch bid history." });
+    return sendControllerError(res, error, "Failed to fetch bid history.");
   }
 }
 
@@ -261,7 +262,7 @@ export async function lockVendorAuction(req, res) {
     });
     return res.status(200).json({ message: "Auction locked successfully!", ...result });
   } catch (error) {
-    return res.status(400).json({ message: error.message });
+    return sendControllerError(res, error, error.message, 400);
   }
 }
 
@@ -300,7 +301,7 @@ export async function updateAuctionStatus(req, res) {
     return res.status(200).json({ message: `Auction status updated to ${newStatus}.` });
   } catch (error) {
     console.error("Update auction status error:", error);
-    return res.status(500).json({ message: "Failed to update auction status." });
+    return sendControllerError(res, error, "Failed to update auction status.");
   }
 }
 
@@ -368,7 +369,7 @@ export async function updateAdminAuction(req, res) {
       return res.status(error.status).json({ message: error.message });
     }
     console.error("Admin auction update error:", error);
-    return res.status(500).json({ message: "Failed to update auction." });
+    return sendControllerError(res, error, "Failed to update auction.");
   }
 }
 
@@ -427,7 +428,7 @@ export async function createAuctionChangeRequest(req, res) {
     return res.status(201).json({ message: "Change request submitted successfully.", request });
   } catch (error) {
     console.error("Create change request error:", error);
-    return res.status(500).json({ message: "Failed to create change request." });
+    return sendControllerError(res, error, "Failed to create change request.");
   }
 }
 
@@ -437,7 +438,7 @@ export async function listVendorChangeRequests(req, res) {
     return res.status(200).json(requests);
   } catch (error) {
     console.error("Fetch vendor change requests error:", error);
-    return res.status(500).json({ message: "Failed to fetch change requests." });
+    return sendControllerError(res, error, "Failed to fetch change requests.");
   }
 }
 
@@ -447,7 +448,7 @@ export async function listAdminChangeRequests(req, res) {
     return res.status(200).json(requests);
   } catch (error) {
     console.error("Fetch admin change requests error:", error);
-    return res.status(500).json({ message: "Failed to fetch change requests." });
+    return sendControllerError(res, error, "Failed to fetch change requests.");
   }
 }
 
@@ -521,7 +522,7 @@ export async function updateChangeRequestStatus(req, res) {
     return res.status(200).json({ message: `Change request ${status}.`, request: updatedRequest });
   } catch (error) {
     console.error("Update change request error:", error);
-    return res.status(500).json({ message: "Failed to update change request." });
+    return sendControllerError(res, error, "Failed to update change request.");
   }
 }
 
@@ -531,7 +532,7 @@ export async function getCustomerBidHistory(req, res) {
     return res.status(200).json(bidHistory);
   } catch (error) {
     console.error("Fetch bid history error:", error);
-    return res.status(500).json({ message: "Failed to fetch bid history." });
+    return sendControllerError(res, error, "Failed to fetch bid history.");
   }
 }
 
@@ -541,7 +542,7 @@ export async function getCustomerWins(req, res) {
     return res.status(200).json(wins);
   } catch (error) {
     console.error("Fetch wins error:", error);
-    return res.status(500).json({ message: "Failed to fetch wins." });
+    return sendControllerError(res, error, "Failed to fetch wins.");
   }
 }
 
@@ -551,6 +552,6 @@ export async function getCustomerStats(req, res) {
     return res.status(200).json(stats);
   } catch (error) {
     console.error("Fetch customer stats error:", error);
-    return res.status(500).json({ message: "Failed to fetch customer statistics." });
+    return sendControllerError(res, error, "Failed to fetch customer statistics.");
   }
 }
