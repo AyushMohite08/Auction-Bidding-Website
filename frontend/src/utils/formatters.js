@@ -116,5 +116,9 @@ export function parseRequestedChanges(value) {
 }
 
 export function compactError(error, fallback = "Something went wrong.") {
+  if (error?.response?.status === 503) {
+    return error.response?.data?.message || "Service temporarily unavailable. Please try again later.";
+  }
+
   return error?.response?.data?.message || error?.message || fallback;
 }
