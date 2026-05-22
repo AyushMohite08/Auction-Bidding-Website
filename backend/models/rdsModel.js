@@ -14,6 +14,10 @@ export const pool = mysql.createPool({
   maxIdle: env.db.maxIdle,
   idleTimeout: env.db.idleTimeoutMs,
   queueLimit: 0,
+  ssl: {
+    minVersion: "TLSv1.2",
+    rejectUnauthorized: true,
+  }
 });
 
 console.log(`RDS pool initialized for host: ${env.db.host || "not configured"}`);
