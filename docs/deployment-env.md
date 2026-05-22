@@ -101,6 +101,24 @@ The DB pool settings are intentionally small:
 
 Sleeping MySQL connections in Workbench are usually normal pooled connections. If you deploy on a free tier, keep these defaults unless you have real traffic that needs more concurrency.
 
+For TiDB Cloud Starter/Serverless public connections, use port `4000` and enable TLS:
+
+```env
+RDS_PORT=4000
+DB_SSL_ENABLED=true
+DB_SSL_REJECT_UNAUTHORIZED=true
+```
+
+TiDB Cloud uses trusted public certificates for Serverless/Starter, so a separate PEM file is usually not needed. Add a CA file only if your hosting/provider documentation specifically requires it.
+
+For Render, Express also needs to trust the Render reverse proxy so rate limits use the real client IP from `X-Forwarded-For`:
+
+```env
+TRUST_PROXY_HOPS=1
+```
+
+Keep this `0` locally unless you are testing behind a local proxy.
+
 User-visible text fields reject emoji at the API boundary. Normal letters, numbers, punctuation, and non-English text are still allowed.
 
 ## Rate Limits And Vendor Quota
@@ -215,3 +233,4 @@ VITE_API_URL=https://your-backend-domain.com/api
 - Run frontend `npm run lint` and `npm run build`.
 - Confirm only one backend instance runs the scheduler, or move scheduler work to a separate worker before scaling horizontally.
 - Keep `SOCKET_DEBUG=false` in production unless you are actively diagnosing realtime connections.
+

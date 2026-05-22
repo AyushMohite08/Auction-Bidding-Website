@@ -2,6 +2,15 @@ import mysql from "mysql2/promise";
 import { ACTIVE_AUCTION_STATUSES, AUCTION_STATUSES } from "../constants/appConstants.js";
 import { env } from "../config/env.js";
 
+function buildSslConfig() {
+  if (!env.db.sslEnabled) return undefined;
+
+  return {
+    minVersion: "TLSv1.2",
+    rejectUnauthorized: env.db.sslRejectUnauthorized,
+  };
+}
+
 export const pool = mysql.createPool({
   host: env.db.host,
   user: env.db.user,
@@ -623,3 +632,4 @@ export async function getCustomerStats(customerId) {
     total_wins: 0,
   };
 }
+

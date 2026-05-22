@@ -57,6 +57,7 @@ export const env = {
   nodeEnv,
   isProduction,
   port: process.env.PORT || 3000,
+  trustProxyHops: parsePositiveInteger(process.env.TRUST_PROXY_HOPS, isProduction ? 1 : 0),
   frontendOrigins,
   db: {
     host: process.env.RDS_HOST,
@@ -67,6 +68,8 @@ export const env = {
     connectionLimit: parsePositiveInteger(process.env.DB_CONNECTION_LIMIT, 5),
     maxIdle: parsePositiveInteger(process.env.DB_MAX_IDLE_CONNECTIONS, 2),
     idleTimeoutMs: parsePositiveInteger(process.env.DB_IDLE_TIMEOUT_MS, 60000),
+    sslEnabled: parseBoolean(process.env.DB_SSL_ENABLED, false),
+    sslRejectUnauthorized: parseBoolean(process.env.DB_SSL_REJECT_UNAUTHORIZED, true),
   },
   auth: {
     accessSecret,
@@ -102,3 +105,4 @@ export const env = {
   apiPausedMessage: process.env.API_PAUSED_MESSAGE || DEFAULT_SERVICE_UNAVAILABLE_MESSAGE,
   socketDebug: parseBoolean(process.env.SOCKET_DEBUG, false),
 };
+

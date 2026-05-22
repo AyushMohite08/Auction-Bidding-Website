@@ -16,6 +16,7 @@ import * as rdsModel from "./models/rdsModel.js";
 
 const app = express();
 const server = http.createServer(app);
+app.set("trust proxy", env.trustProxyHops);
 
 const corsOptions = {
   origin(origin, callback) {
@@ -116,3 +117,4 @@ server.listen(env.port, "0.0.0.0", async () => {
     startScheduler(io);
   }
 });
+
