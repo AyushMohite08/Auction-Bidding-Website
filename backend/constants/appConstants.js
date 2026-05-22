@@ -28,3 +28,12 @@ export const ADMIN_AUCTION_STATUSES = Object.freeze([
   AUCTION_STATUSES.APPROVED,
   AUCTION_STATUSES.REJECTED,
 ]);
+
+export const DEFAULT_SERVICE_UNAVAILABLE_MESSAGE =
+  "Service temporarily unavailable. Please try again later.";
+
+export const RATE_LIMIT_WINDOWS = Object.freeze({
+  FIVE_MINUTES: 5 * 60 * 1000,
+  FIFTEEN_MINUTES: 15 * 60 * 1000,
+  ONE_HOUR: 60 * 60 * 1000,
+});

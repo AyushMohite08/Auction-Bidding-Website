@@ -1,3 +1,5 @@
+import { DEFAULT_SERVICE_UNAVAILABLE_MESSAGE } from "../constants/appConstants.js";
+
 export function notFoundHandler(req, res) {
   res.status(404).json({ success: false, message: "Route not found." });
 }
@@ -20,7 +22,7 @@ export function sendControllerError(res, error, fallbackMessage, fallbackStatus 
     console.error("Database unavailable:", error.message);
     return res.status(503).json({
       success: false,
-      message: "Service temporarily unavailable. Please try again later.",
+      message: DEFAULT_SERVICE_UNAVAILABLE_MESSAGE,
     });
   }
 
@@ -39,7 +41,7 @@ export function errorHandler(error, req, res, next) {
     console.error("Database unavailable:", error.message);
     return res.status(503).json({
       success: false,
-      message: "Service temporarily unavailable. Please try again later.",
+      message: DEFAULT_SERVICE_UNAVAILABLE_MESSAGE,
     });
   }
 

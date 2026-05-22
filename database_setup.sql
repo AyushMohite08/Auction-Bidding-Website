@@ -1,5 +1,6 @@
 -- Complete Database Setup for Auction Project
--- Run this script to set up your database with all required tables and columns
+-- Run this script for a fresh database. It includes the current final schema,
+-- so you do not need to run the incremental files in backend/migrations on a fresh install.
 
 CREATE DATABASE IF NOT EXISTS auction_db;
 USE auction_db;
@@ -29,7 +30,8 @@ CREATE TABLE IF NOT EXISTS `user_roles` (
   CONSTRAINT `user_roles_user_fk` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Create the 'auctions' table with all columns including locked_price
+-- Create the 'auctions' table with all current auction management columns.
+-- idx_auctions_vendor_created_at supports monthly vendor auction quota checks.
 CREATE TABLE IF NOT EXISTS `auctions` (
   `id` int NOT NULL AUTO_INCREMENT,
   `vendor_id` varchar(36) NOT NULL,
@@ -107,15 +109,20 @@ CREATE TABLE IF NOT EXISTS `bids` (
   CONSTRAINT `bids_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- If you're upgrading an existing database, run this to add the locked_price column:
--- ALTER TABLE `auctions` ADD COLUMN IF NOT EXISTS `locked_price` DECIMAL(10,2) NULL DEFAULT NULL AFTER `current_bid`;
+-- Existing databases should use backend/migrations instead of this fresh setup file:
+-- 1. single_user_multiple_roles.sql
+-- 2. management_and_popcorn.sql
+-- 3. add_locked_price.sql
+-- 4. vendor_monthly_quota_index.sql
 
 -- Verify tables were created
 SHOW TABLES;
 
--- Display structure of auctions table to verify locked_price column exists
+-- Verify table structure and quota index
 DESCRIBE auctions;
 DESCRIBE users;
 DESCRIBE user_roles;
+DESCRIBE bids;
 DESCRIBE auction_change_requests;
 DESCRIBE auction_audit_logs;
+SHOW INDEX FROM auctions WHERE Key_name = 'idx_auctions_vendor_created_at';

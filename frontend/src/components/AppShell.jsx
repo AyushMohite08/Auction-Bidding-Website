@@ -4,7 +4,7 @@ import {
   getServiceUnavailableState,
   SERVICE_RESTORED_EVENT,
   SERVICE_UNAVAILABLE_EVENT,
-} from "../api/apiClient";
+} from "../utils/serviceStatus";
 import Navbar from "./Navbar";
 
 export default function AppShell({ children }) {

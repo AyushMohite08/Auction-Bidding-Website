@@ -1,4 +1,5 @@
 import { API_SERVER_URL } from "../api/apiClient";
+import { DEFAULT_SERVICE_UNAVAILABLE_MESSAGE } from "./serviceStatus";
 
 export const ACTIVE_STATUSES = ["approved", "active"];
 export const CLOSED_STATUSES = ["sold", "expired", "rejected", "cancelled"];
@@ -117,7 +118,7 @@ export function parseRequestedChanges(value) {
 
 export function compactError(error, fallback = "Something went wrong.") {
   if (error?.response?.status === 503) {
-    return error.response?.data?.message || "Service temporarily unavailable. Please try again later.";
+    return error.response?.data?.message || DEFAULT_SERVICE_UNAVAILABLE_MESSAGE;
   }
 
   return error?.response?.data?.message || error?.message || fallback;

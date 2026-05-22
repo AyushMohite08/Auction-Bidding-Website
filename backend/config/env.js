@@ -1,4 +1,5 @@
 import dotenv from "dotenv";
+import { DEFAULT_SERVICE_UNAVAILABLE_MESSAGE } from "../constants/appConstants.js";
 
 dotenv.config();
 
@@ -87,14 +88,14 @@ export const env = {
     uploadFolder: process.env.IMAGEKIT_UPLOAD_FOLDER || "/auction-items",
   },
   rateLimits: {
-    generalMax: parsePositiveInteger(Number(process.env.RATE_LIMIT_GENERAL_MAX), 600),
-    authMax: parsePositiveInteger(Number(process.env.RATE_LIMIT_AUTH_MAX), 5),
-    registerMax: parsePositiveInteger(Number(process.env.RATE_LIMIT_REGISTER_MAX), 5),
-    bidMax: parsePositiveInteger(Number(process.env.RATE_LIMIT_BID_MAX), 30),
-    auctionCreateMax: parsePositiveInteger(Number(process.env.RATE_LIMIT_AUCTION_CREATE_MAX), 10),
+    generalMax: parsePositiveInteger(process.env.RATE_LIMIT_GENERAL_MAX, 600),
+    authMax: parsePositiveInteger(process.env.RATE_LIMIT_AUTH_MAX, 5),
+    registerMax: parsePositiveInteger(process.env.RATE_LIMIT_REGISTER_MAX, 5),
+    bidMax: parsePositiveInteger(process.env.RATE_LIMIT_BID_MAX, 30),
+    auctionCreateMax: parsePositiveInteger(process.env.RATE_LIMIT_AUCTION_CREATE_MAX, 10),
   },
-  vendorMonthlyAuctionLimit: parsePositiveInteger(Number(process.env.VENDOR_MONTHLY_AUCTION_LIMIT), 20),
+  vendorMonthlyAuctionLimit: parsePositiveInteger(process.env.VENDOR_MONTHLY_AUCTION_LIMIT, 20),
   apiPaused: parseBoolean(process.env.API_PAUSED, false),
-  apiPausedMessage: process.env.API_PAUSED_MESSAGE || "Service temporarily unavailable. Please try again later.",
+  apiPausedMessage: process.env.API_PAUSED_MESSAGE || DEFAULT_SERVICE_UNAVAILABLE_MESSAGE,
   socketDebug: parseBoolean(process.env.SOCKET_DEBUG, false),
 };

@@ -2,7 +2,11 @@ import express from "express";
 import * as auctionController from "../controllers/auctionController.js";
 import { requireAuth, requireRole, requireCustomerSelfOrAdmin } from "../middleware/authMiddleware.js";
 import { requireJson } from "../middleware/contentTypeMiddleware.js";
-import { auctionCreateLimiter, bidLimiter, enforceVendorMonthlyAuctionLimit } from "../middleware/rateLimitMiddleware.js";
+import {
+  auctionCreateLimiter,
+  bidLimiter,
+  enforceVendorMonthlyAuctionLimit,
+} from "../middleware/rateLimitMiddleware.js";
 import { uploadAuctionImage } from "../middleware/uploadMiddleware.js";
 import { USER_ROLES } from "../constants/appConstants.js";
 

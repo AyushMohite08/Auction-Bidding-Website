@@ -1,10 +1,7 @@
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { env } from "../config/env.js";
+import { RATE_LIMIT_WINDOWS } from "../constants/appConstants.js";
 import * as rdsModel from "../models/rdsModel.js";
-
-const FIFTEEN_MINUTES = 15 * 60 * 1000;
-const FIVE_MINUTES = 5 * 60 * 1000;
-const ONE_HOUR = 60 * 60 * 1000;
 
 function rateLimitResponse(message) {
   return { success: false, message };
@@ -18,52 +15,54 @@ function userOrIpKey(req) {
   return req.user?.id || requestIpKey(req);
 }
 
-export const generalApiLimiter = rateLimit({
-  windowMs: FIFTEEN_MINUTES,
+function createLimiter({ windowMs, limit, message, keyGenerator, skipSuccessfulRequests = false }) {
+  return rateLimit({
+    windowMs,
+    limit,
+    standardHeaders: "draft-8",
+    legacyHeaders: false,
+    keyGenerator,
+    skipSuccessfulRequests,
+    message: rateLimitResponse(message),
+  });
+}
+
+export const generalApiLimiter = createLimiter({
+  windowMs: RATE_LIMIT_WINDOWS.FIFTEEN_MINUTES,
   limit: env.rateLimits.generalMax,
-  standardHeaders: "draft-8",
-  legacyHeaders: false,
-  message: rateLimitResponse("Too many requests. Please try again shortly."),
+  message: "Too many requests. Please try again shortly.",
 });
 
-export const authLoginLimiter = rateLimit({
-  windowMs: FIFTEEN_MINUTES,
+export const authLoginLimiter = createLimiter({
+  windowMs: RATE_LIMIT_WINDOWS.FIFTEEN_MINUTES,
   limit: env.rateLimits.authMax,
-  standardHeaders: "draft-8",
-  legacyHeaders: false,
   skipSuccessfulRequests: true,
   keyGenerator(req) {
     const role = String(req.params.role || "unknown").toLowerCase();
     const email = String(req.body?.email || "unknown").trim().toLowerCase();
     return `${requestIpKey(req)}:${role}:${email}`;
   },
-  message: rateLimitResponse("Too many failed login attempts. Please try again later."),
+  message: "Too many failed login attempts. Please try again later.",
 });
 
-export const registerLimiter = rateLimit({
-  windowMs: ONE_HOUR,
+export const registerLimiter = createLimiter({
+  windowMs: RATE_LIMIT_WINDOWS.ONE_HOUR,
   limit: env.rateLimits.registerMax,
-  standardHeaders: "draft-8",
-  legacyHeaders: false,
-  message: rateLimitResponse("Too many registration attempts. Please try again later."),
+  message: "Too many registration attempts. Please try again later.",
 });
 
-export const bidLimiter = rateLimit({
-  windowMs: FIVE_MINUTES,
+export const bidLimiter = createLimiter({
+  windowMs: RATE_LIMIT_WINDOWS.FIVE_MINUTES,
   limit: env.rateLimits.bidMax,
-  standardHeaders: "draft-8",
-  legacyHeaders: false,
   keyGenerator: userOrIpKey,
-  message: rateLimitResponse("You are bidding too quickly. Please wait a moment and try again."),
+  message: "You are bidding too quickly. Please wait a moment and try again.",
 });
 
-export const auctionCreateLimiter = rateLimit({
-  windowMs: ONE_HOUR,
+export const auctionCreateLimiter = createLimiter({
+  windowMs: RATE_LIMIT_WINDOWS.ONE_HOUR,
   limit: env.rateLimits.auctionCreateMax,
-  standardHeaders: "draft-8",
-  legacyHeaders: false,
   keyGenerator: userOrIpKey,
-  message: rateLimitResponse("Too many auction creation attempts. Please try again later."),
+  message: "Too many auction creation attempts. Please try again later.",
 });
 
 export async function enforceVendorMonthlyAuctionLimit(req, res, next) {
