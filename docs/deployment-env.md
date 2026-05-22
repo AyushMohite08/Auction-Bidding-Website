@@ -25,6 +25,9 @@ JWT_ACCESS_SECRET=use_a_long_random_access_secret
 JWT_REFRESH_SECRET=use_a_different_long_random_refresh_secret
 JWT_ACCESS_EXPIRES_IN=15m
 JWT_REFRESH_EXPIRES_IN=7d
+DB_CONNECTION_LIMIT=5
+DB_MAX_IDLE_CONNECTIONS=2
+DB_IDLE_TIMEOUT_MS=60000
 AUTH_COOKIE_SECURE=false
 AUTH_COOKIE_SAME_SITE=lax
 FRONTEND_ORIGINS=http://localhost:5173,http://localhost:3000
@@ -75,6 +78,30 @@ node -e "console.log(require('crypto').randomBytes(64).toString('base64'))"
 Run the command twice: once for `JWT_ACCESS_SECRET`, once for `JWT_REFRESH_SECRET`.
 
 `JWT_SECRET` is supported only as a fallback for older env files. For deployment, prefer setting `JWT_ACCESS_SECRET` and `JWT_REFRESH_SECRET` explicitly.
+
+## Database Charset And Pool
+
+The backend opens MySQL connections with `utf8mb4`. This avoids old `utf8` session warnings and keeps the connection charset aligned with the current table definitions.
+
+Fresh installs should use `database_setup.sql`, which creates `auction_db` with `utf8mb4`. Existing databases can be checked manually:
+
+```sql
+SELECT @@character_set_client, @@character_set_connection, @@collation_connection;
+```
+
+Expected connection values should be `utf8mb4` with an `utf8mb4_*` collation.
+
+The DB pool settings are intentionally small:
+
+| Env value | Default | Meaning |
+| --- | ---: | --- |
+| `DB_CONNECTION_LIMIT` | `5` | Maximum open MySQL connections from the backend pool |
+| `DB_MAX_IDLE_CONNECTIONS` | `2` | Maximum idle connections kept ready |
+| `DB_IDLE_TIMEOUT_MS` | `60000` | How long an idle connection can stay open |
+
+Sleeping MySQL connections in Workbench are usually normal pooled connections. If you deploy on a free tier, keep these defaults unless you have real traffic that needs more concurrency.
+
+User-visible text fields reject emoji at the API boundary. Normal letters, numbers, punctuation, and non-English text are still allowed.
 
 ## Rate Limits And Vendor Quota
 

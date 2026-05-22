@@ -2,7 +2,9 @@
 -- Run this script for a fresh database. It includes the current final schema,
 -- so you do not need to run the incremental files in backend/migrations on a fresh install.
 
-CREATE DATABASE IF NOT EXISTS auction_db;
+CREATE DATABASE IF NOT EXISTS auction_db
+  DEFAULT CHARACTER SET utf8mb4
+  COLLATE utf8mb4_general_ci;
 USE auction_db;
 
 -- Create the 'users' table

@@ -64,6 +64,9 @@ export const env = {
     password: process.env.RDS_PASS,
     database: process.env.RDS_DB,
     port: Number(process.env.RDS_PORT || 3306),
+    connectionLimit: parsePositiveInteger(process.env.DB_CONNECTION_LIMIT, 5),
+    maxIdle: parsePositiveInteger(process.env.DB_MAX_IDLE_CONNECTIONS, 2),
+    idleTimeoutMs: parsePositiveInteger(process.env.DB_IDLE_TIMEOUT_MS, 60000),
   },
   auth: {
     accessSecret,

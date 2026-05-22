@@ -2,6 +2,7 @@ import { env } from "../config/env.js";
 import { PUBLIC_REGISTRATION_ROLES, USER_ROLES } from "../constants/appConstants.js";
 import * as rdsModel from "../models/rdsModel.js";
 import * as authService from "../services/authService.js";
+import * as textValidationService from "../services/textValidationService.js";
 import { clearAuthCookies, readCookie, setAuthCookies } from "../utils/cookies.js";
 import { sendControllerError } from "../utils/http.js";
 import { verifyRefreshToken } from "../utils/jwt.js";
@@ -24,6 +25,10 @@ export async function register(req, res) {
       success: false,
       message: "Registration is only available for customers and vendors.",
     });
+  }
+  const textError = textValidationService.getEmojiValidationError("name", name);
+  if (textError) {
+    return res.status(400).json({ success: false, message: textError });
   }
 
   try {
@@ -165,6 +170,13 @@ export async function updateMe(req, res) {
 
   if (name !== undefined && !String(name).trim()) {
     return res.status(400).json({ success: false, message: "Name cannot be empty." });
+  }
+  const textError = textValidationService.getTextFieldsValidationError([
+    { label: "name", value: name },
+    { label: "contact info", value: contact_info },
+  ]);
+  if (textError) {
+    return res.status(400).json({ success: false, message: textError });
   }
 
   try {

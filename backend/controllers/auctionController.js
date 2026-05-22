@@ -2,6 +2,7 @@ import { ACTIVE_AUCTION_STATUSES, ADMIN_AUCTION_STATUSES, AUCTION_STATUSES } fro
 import * as rdsModel from "../models/rdsModel.js";
 import * as auctionService from "../services/auctionService.js";
 import * as imageService from "../services/imageService.js";
+import * as textValidationService from "../services/textValidationService.js";
 import { sendNotificationEvent } from "../services/notificationService.js";
 import { sendControllerError } from "../utils/http.js";
 
@@ -64,6 +65,13 @@ export async function createVendorAuction(req, res) {
   const popcornSettings = auctionService.getPopcornSettings(req.body);
   if (popcornSettings.error) {
     return res.status(400).json({ message: popcornSettings.error });
+  }
+  const textError = textValidationService.getTextFieldsValidationError([
+    { label: "auction title", value: itemName },
+    { label: "auction description", value: description },
+  ]);
+  if (textError) {
+    return res.status(400).json({ message: textError });
   }
 
   try {
@@ -199,6 +207,13 @@ export async function updateVendorAuction(req, res) {
     if (updateError) {
       return res.status(400).json({ message: updateError });
     }
+    const textError = textValidationService.getTextFieldsValidationError([
+      { label: "auction title", value: updates.item_name },
+      { label: "auction description", value: updates.description },
+    ]);
+    if (textError) {
+      return res.status(400).json({ message: textError });
+    }
 
     const dateError = auctionService.validateAuctionUpdateDates(auction, updates);
     if (dateError) {
@@ -332,12 +347,23 @@ export async function updateAdminAuction(req, res) {
     if (hasBids && !reason) {
       return res.status(400).json({ message: "Reason is required for admin edits after bids exist." });
     }
+    const reasonError = textValidationService.getEmojiValidationError("admin edit reason", reason);
+    if (reasonError) {
+      return res.status(400).json({ message: reasonError });
+    }
 
     const hasImageUpdate = Boolean(req.file && allowedFields.includes("image_url"));
     const updates = auctionService.normalizeAuctionChanges(req.body, allowedFields);
     const updateError = auctionService.validateAuctionUpdates(updates, { hasImageUpdate });
     if (updateError) {
       return res.status(400).json({ message: updateError });
+    }
+    const textError = textValidationService.getTextFieldsValidationError([
+      { label: "auction title", value: updates.item_name },
+      { label: "auction description", value: updates.description },
+    ]);
+    if (textError) {
+      return res.status(400).json({ message: textError });
     }
 
     const dateError = auctionService.validateAuctionUpdateDates(auction, updates);
@@ -387,6 +413,13 @@ export async function createAuctionChangeRequest(req, res) {
   const invalidKeys = Object.keys(requestedChanges).filter((key) => !allowedKeys.includes(key));
   if (invalidKeys.length > 0 || Object.keys(requestedChanges).length === 0) {
     return res.status(400).json({ message: "Requests may include only description and endTime." });
+  }
+  const textError = textValidationService.getTextFieldsValidationError([
+    { label: "change request description", value: requestedChanges.description },
+    { label: "change request reason", value: req.body.reason },
+  ]);
+  if (textError) {
+    return res.status(400).json({ message: textError });
   }
 
   try {
@@ -461,6 +494,10 @@ export async function updateChangeRequestStatus(req, res) {
   }
   if (!["approved", "rejected"].includes(status)) {
     return res.status(400).json({ message: "Status must be approved or rejected." });
+  }
+  const noteError = textValidationService.getEmojiValidationError("admin note", adminNote);
+  if (noteError) {
+    return res.status(400).json({ message: noteError });
   }
 
   try {
