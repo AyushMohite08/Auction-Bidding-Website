@@ -7,6 +7,7 @@ export const USER_ROLES = Object.freeze({
 export const PUBLIC_REGISTRATION_ROLES = Object.freeze([
   USER_ROLES.CUSTOMER,
   USER_ROLES.VENDOR,
+  USER_ROLES.ADMIN,
 ]);
 
 export const AUCTION_STATUSES = Object.freeze({
